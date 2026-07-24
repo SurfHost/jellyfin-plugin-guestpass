@@ -219,6 +219,34 @@ public sealed class ShareLinkRedemptionService
   }).then((r) => r.json());
 
   const serverAddress = window.location.origin + {{pathBaseJson}};
+
+  // Do not destroy an existing sign-in. Jellyfin's web client keeps one
+  // credential per server in localStorage, so writing the guest's over it would
+  // log out whoever is already signed in on this browser (the admin opening a
+  // link to test it, or a household member). If there is already a WORKING
+  // session for this server under a different user, keep it and just open the
+  // shared title in it. A stale token left over from a previous, now-revoked
+  // guest fails this check and is replaced by the new guest session as normal.
+  let existing = null;
+  try { existing = JSON.parse(localStorage.getItem("jellyfin_credentials") || "null"); } catch (_) { existing = null; }
+  const prior = existing && Array.isArray(existing.Servers)
+    ? existing.Servers.find((s) => s && s.Id === info.Id && s.AccessToken && s.UserId && s.UserId !== userId)
+    : null;
+  if (prior) {
+    let stillValid = false;
+    try {
+      const check = await fetch(serverAddress + "/Users/Me", {
+        headers: { "Authorization": 'MediaBrowser Token="' + prior.AccessToken + '"', "Accept": "application/json" }
+      });
+      stillValid = check.ok;
+    } catch (_) { stillValid = false; }
+    if (stillValid) {
+      document.getElementById("status").textContent = "Opening in your existing session.";
+      window.location.replace(redirectUrl + "&serverId=" + encodeURIComponent(info.Id));
+      return;
+    }
+  }
+
   const credentials = {
     Servers: [
       {

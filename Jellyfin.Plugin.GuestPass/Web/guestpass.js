@@ -7,7 +7,7 @@
     // Spanish/Portuguese copiar.
     var copyVerbs = ['copy', 'copi', 'kopi', 'masol', 'kopyala', 'antigraf', 'kopiro', 'copie'];
     var actionLabel = 'GuestPass';
-    var clientVersion = '0.1.0';
+    var clientVersion = '0.2.2';
     var allowedItemStorageKey = 'guestpass.allowedItemId';
     var guestClassName = 'guestpass-guest';
     var hiddenAttr = 'data-guestpass-hidden';
@@ -447,6 +447,39 @@
         return /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(value || '').trim());
     }
 
+    var shareableTypeCache = {};
+
+    // The real guard against injecting on the wrong menu: ask the server what the
+    // resolved id actually is. On the Users dashboard the fallback would resolve a
+    // user's GUID and, matching some menu-item id, wrongly add GuestPass there.
+    // A user id (or any non-media id) 404s here, so it is rejected. Results are
+    // cached because an item's type does not change.
+    function isShareableItem(itemId) {
+        if (!isItemGuid(itemId)) {
+            return Promise.resolve(false);
+        }
+
+        if (Object.prototype.hasOwnProperty.call(shareableTypeCache, itemId)) {
+            return Promise.resolve(shareableTypeCache[itemId]);
+        }
+
+        return getCurrentUser().then(function (user) {
+            if (!user || !user.Id) {
+                return false;
+            }
+
+            return apiGet('Users/' + user.Id + '/Items/' + itemId).then(function (item) {
+                var type = item && item.Type ? String(item.Type) : '';
+                var ok = type === 'Movie' || type === 'Series' || type === 'Season' || type === 'Episode';
+                shareableTypeCache[itemId] = ok;
+                return ok;
+            }).catch(function () {
+                shareableTypeCache[itemId] = false;
+                return false;
+            });
+        });
+    }
+
     async function scanForMoreMenuActions() {
         var user = await getCurrentUser();
         if (!isAdministrator(user)) {
@@ -508,12 +541,29 @@
             return;
         }
 
-        var template = findBestActionTemplate(container);
-        if (!template) {
-            return;
-        }
+        // Confirm the resolved id is really a shareable media item before adding
+        // the entry, so the menu on a user card (or anything else that is not a
+        // movie/episode/series/season) never gets a GuestPass entry.
+        isShareableItem(itemId).then(function (ok) {
+            if (!ok) {
+                return;
+            }
 
-        insertActionAfter(template, itemId, true);
+            // The menu may have closed or already been injected during the await.
+            var openContainer = findOpenActionContainer();
+            if (!openContainer || openContainer.querySelector('[' + injectedAttr + '="1"]')) {
+                return;
+            }
+
+            var template = findBestActionTemplate(openContainer);
+            if (!template) {
+                return;
+            }
+
+            insertActionAfter(template, itemId, true);
+        }).catch(function () {
+            // Never let a failed check throw out of the scan loop.
+        });
     }
 
     function isItemMenuAction(node) {
