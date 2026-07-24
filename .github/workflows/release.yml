@@ -30,9 +30,11 @@ jobs:
         id: v
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Tag must be vN.N.N.N: Jellyfin parses this with System.Version and a" >&2
-            echo "non-numeric value throws, which silently empties the whole catalog." >&2
+          # 3-part SemVer, e.g. 0.1.0, matching the other SurfHost projects.
+          # Jellyfin parses this with System.Version, which throws on anything
+          # non-numeric and silently empties the whole catalog, so keep it strict.
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag must be vMAJOR.MINOR.PATCH, e.g. v0.1.0." >&2
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
