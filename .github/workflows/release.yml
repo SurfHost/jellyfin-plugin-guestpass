@@ -1,13 +1,14 @@
 name: Release
 
-# Tag a commit v1.0.1.0 and push the tag. This builds the plugin, packages it,
-# publishes a GitHub release with the zip attached, and appends the new version
-# to manifest.json on main with the correct MD5, which is what Jellyfin verifies
-# the download against.
+# Manual only. Releases are currently cut by hand (build, package, verify,
+# gh release create). This workflow would also build, package, publish a release
+# and append to manifest.json, but if it ran automatically on a tag push it would
+# collide with the manual release that already created that tag and release, and
+# fail. It is kept here, runnable on demand from the Actions tab, for the day the
+# release process moves fully to CI. If you switch to it, stop releasing by hand:
+# just push a vMAJOR.MINOR.PATCH tag and trigger this, and do not also run
+# gh release create for the same version.
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:
