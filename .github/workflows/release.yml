@@ -1,22 +1,32 @@
 name: Release
 
-# Manual only. Releases are currently cut by hand (build, package, verify,
-# gh release create). This workflow would also build, package, publish a release
-# and append to manifest.json, but if it ran automatically on a tag push it would
-# collide with the manual release that already created that tag and release, and
-# fail. It is kept here, runnable on demand from the Actions tab, for the day the
-# release process moves fully to CI. If you switch to it, stop releasing by hand:
-# just push a vMAJOR.MINOR.PATCH tag and trigger this, and do not also run
-# gh release create for the same version.
+# Builds the plugin, publishes (or updates) the GitHub release for the version in
+# meta.json, and keeps manifest.json in step with the built zip's checksum.
+#
+# The version is read from Jellyfin.Plugin.GuestPass/meta.json, which is the
+# single source of truth, so this works whether triggered by a tag push or run by
+# hand from the Actions tab. Every step is idempotent: re-running it for a version
+# that already has a release replaces that release's asset and refreshes the
+# checksum instead of failing, so it can never collide with itself.
+#
+# To cut a release: bump <Version> in the csproj and "version" in meta.json,
+# commit to main, then either push a tag vX.Y.Z or run this workflow manually.
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,18 +37,16 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Resolve version from the tag
+      - name: Read the version from meta.json
         id: v
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          # 3-part SemVer, e.g. 0.1.0, matching the other SurfHost projects.
-          # Jellyfin parses this with System.Version, which throws on anything
-          # non-numeric and silently empties the whole catalog, so keep it strict.
+          VERSION=$(jq -r '.version' Jellyfin.Plugin.GuestPass/meta.json)
           if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Tag must be vMAJOR.MINOR.PATCH, e.g. v0.1.0." >&2
+            echo "meta.json version must be MAJOR.MINOR.PATCH, got '$VERSION'." >&2
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$VERSION"
 
       - name: Build
         run: |
@@ -52,16 +60,13 @@ jobs:
         id: pkg
         run: |
           VERSION="${{ steps.v.outputs.version }}"
-          # Keep meta.json's version in step with the tag.
-          jq --arg v "$VERSION" '.version = $v' Jellyfin.Plugin.GuestPass/meta.json > meta.json
-
-          # -j flattens paths. Jellyfin extracts the archive verbatim into
-          # <plugins>/<name>_<version>/, so a wrapper folder would nest and the
-          # plugin would never be found.
+          cp Jellyfin.Plugin.GuestPass/meta.json meta.json
+          # -j flattens paths so the zip is flat; Jellyfin extracts it verbatim
+          # into <plugins>/<name>_<version>/ and a nested folder would break it.
           zip -j "guestpass_$VERSION.zip" publish/Jellyfin.Plugin.GuestPass.dll meta.json
 
-          # Fail loudly rather than shipping a package that installs and then
-          # silently does nothing. A private copy of these assemblies would give
+          # Fail loudly rather than shipping a package that installs and silently
+          # does nothing: a private copy of these assemblies would give the
           # IStartupFilter a second type identity in the plugin load context.
           if unzip -l "guestpass_$VERSION.zip" | grep -Eq 'Microsoft\.|MediaBrowser\.|/'; then
             echo "Package contains nested paths or framework assemblies." >&2
@@ -71,27 +76,39 @@ jobs:
 
           echo "md5=$(md5sum "guestpass_$VERSION.zip" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
-      - name: Publish the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" "guestpass_${{ steps.v.outputs.version }}.zip" \
-            --title "$GITHUB_REF_NAME" --generate-notes --latest
-
-      - name: Add the version to manifest.json
+      - name: Publish or update the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.v.outputs.version }}"
-          jq --arg v "$VERSION" \
-             --arg sum "${{ steps.pkg.outputs.md5 }}" \
-             --arg url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/guestpass_${VERSION}.zip" \
-             --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-             '.[0].versions |= ([{version: $v, changelog: "See the GitHub release notes.", targetAbi: "10.11.0.0", sourceUrl: $url, checksum: $sum, timestamp: $ts}] + (map(select(.version != $v)) // []))' \
-             manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "guestpass_$VERSION.zip" --clobber
+          else
+            gh release create "$TAG" "guestpass_$VERSION.zip" --target main --title "$TAG" --generate-notes --latest
+          fi
 
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
+      - name: Sync manifest.json to the built checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.v.outputs.version }}"
+          MD5="${{ steps.pkg.outputs.md5 }}"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/guestpass_${VERSION}.zip"
+          TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          # Preserve an existing changelog for this version if there is one.
+          CL="$(jq -r --arg v "$VERSION" '(.[0].versions[] | select(.version==$v) | .changelog) // "See the GitHub release notes."' manifest.json)"
+          # Upsert: drop any existing entry for this version, put the fresh one first.
+          jq --arg v "$VERSION" --arg sum "$MD5" --arg url "$URL" --arg ts "$TS" --arg cl "$CL" \
+            '.[0].versions |= ([{version:$v, changelog:$cl, targetAbi:"10.11.0.0", sourceUrl:$url, checksum:$sum, timestamp:$ts}] + map(select(.version != $v)))' \
+            manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+
           git add manifest.json
-          git commit -m "Add $VERSION to the plugin manifest"
-          git push origin HEAD:main
+          if git diff --cached --quiet; then
+            echo "manifest.json already up to date."
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            git commit -m "Sync manifest.json for v${VERSION} [skip ci]"
+            git push origin HEAD:main
+          fi
