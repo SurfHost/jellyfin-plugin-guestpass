@@ -48,4 +48,12 @@ public class PluginConfiguration : BasePluginConfiguration
     /// bars, floating buttons) so a guest only sees the shared title. Empty by default.
     /// </summary>
     public string GuestHiddenSelectors { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the client script is injected into
+    /// the web client's index.html. Turning this off disables the context-menu
+    /// button without uninstalling the plugin, which is the escape hatch if a
+    /// future Jellyfin release ever breaks the injection.
+    /// </summary>
+    public bool InjectionEnabled { get; set; } = true;
 }
