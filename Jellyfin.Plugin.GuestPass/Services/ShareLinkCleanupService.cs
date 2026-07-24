@@ -11,6 +11,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.GuestPass.Services;
 
+/// <summary>Result of a delete request.</summary>
+public enum DeleteOutcome
+{
+    /// <summary>No record with that id exists.</summary>
+    NotFound,
+
+    /// <summary>The link was torn down and its record removed.</summary>
+    Deleted,
+
+    /// <summary>Teardown did not fully succeed; the record is kept as Revoked and will be retried.</summary>
+    TeardownPending
+}
+
 /// <summary>Cleanly expires links and tears down temporary guest state.</summary>
 public sealed class ShareLinkCleanupService : IShareLinkCleanupService
 {
@@ -63,29 +76,39 @@ public sealed class ShareLinkCleanupService : IShareLinkCleanupService
     }
 
     /// <summary>
-    /// Revokes a share link (full teardown of the guest user and item tags) and
-    /// then removes its record from the store, so it stops showing in the list.
-    /// Returns false if no record with that id exists.
+    /// Revokes a share link (full teardown of the guest user and item tags) and,
+    /// only if that teardown fully succeeded, removes its record from the store.
+    /// If teardown left an error, the record is kept as Revoked so the scheduled
+    /// cleanup keeps retrying and the admin can see it did not finish.
     /// </summary>
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<DeleteOutcome> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var record = await _store.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
         if (record is null)
         {
-            return false;
+            return DeleteOutcome.NotFound;
         }
 
         // Same teardown as a revoke: disable and delete the guest user, strip the
-        // temporary tag from the item tree. Only then drop the record.
+        // temporary tag from the item tree.
         record.Status = ShareLinkStatus.Revoked;
         record.CleanupError = null;
         await _store.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
 
         var records = await _store.ListAsync(cancellationToken).ConfigureAwait(false);
-        await CleanupRecordInternalAsync(record, records, true, cancellationToken).ConfigureAwait(false);
+        var result = await CleanupRecordInternalAsync(record, records, true, cancellationToken).ConfigureAwait(false);
+
+        // CleanupRecordInternalAsync swallows per-step failures into CleanupError
+        // instead of throwing. Only drop the record once teardown actually worked;
+        // otherwise leave the Revoked record in place so nothing is orphaned
+        // silently and the scheduled task retries it.
+        if (result.CleanupError is not null)
+        {
+            return DeleteOutcome.TeardownPending;
+        }
 
         await _store.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
-        return true;
+        return DeleteOutcome.Deleted;
     }
 
     /// <summary>Runs cleanup for one record by id.</summary>

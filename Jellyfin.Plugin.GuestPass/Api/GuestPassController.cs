@@ -314,13 +314,13 @@ public sealed class GuestPassController : ControllerBase
             return Forbid();
         }
 
-        var deleted = await _cleanupService.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
-        if (!deleted)
+        var outcome = await _cleanupService.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
+        return outcome switch
         {
-            return NotFound(new { error = "Share link not found." });
-        }
-
-        return Ok(new { deleted = true });
+            DeleteOutcome.NotFound => NotFound(new { error = "Share link not found." }),
+            DeleteOutcome.TeardownPending => Ok(new { deleted = false, pending = true, error = "Teardown did not finish; the link is revoked and will be retried automatically." }),
+            _ => Ok(new { deleted = true })
+        };
     }
 
     /// <summary>Reports whether the client-script injection is working.</summary>

@@ -9,6 +9,14 @@
         "imageUrl": "",
         "versions": [
             {
+                "version": "0.2.1",
+                "changelog": "Hardening from a code review of 0.2.0. Deleting a link no longer removes its record when teardown failed, so a failed cleanup stays visible and is retried instead of silently orphaning a guest user or tag. Guest teardown now finds the guest user by its deterministic name as a last resort, closing a window where a crash or a delete racing a redemption could leave an enabled guest account behind. The guest session count is capped instead of unlimited, so repeated opens of a link cannot pile up sessions without bound. Corrected the context-menu detection to jellyfin-web's real action ids. No change to how you create, share or revoke links.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.1/guestpass_0.2.1.zip",
+                "checksum": "d0a804e25694b39c0eadb5be6354072e",
+                "timestamp": "2026-07-24T04:00:00Z"
+            },
+            {
                 "version": "0.2.0",
                 "changelog": "Links now work every time until they expire or are revoked, instead of being one-time use, and work on several devices at once. Adds a Delete action that revokes a link and removes its record, so revoked links no longer pile up. The GuestPass entry no longer appears on the Users dashboard menu, only on movies, episodes, series and seasons. Removes the stray French line on the dead-link page.",
                 "targetAbi": "10.11.0.0",

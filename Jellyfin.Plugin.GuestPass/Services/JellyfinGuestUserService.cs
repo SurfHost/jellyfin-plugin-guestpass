@@ -154,10 +154,20 @@ public sealed class JellyfinGuestUserService
 
         if (!string.IsNullOrWhiteSpace(record.GuestUserName))
         {
-            return _userManager.GetUserByName(record.GuestUserName);
+            var byName = _userManager.GetUserByName(record.GuestUserName);
+            if (byName is not null)
+            {
+                return byName;
+            }
         }
 
-        return null;
+        // Last resort: the guest username is derived solely from record.Id, which
+        // is always persisted. This finds a guest user that was created but whose
+        // id/name never made it back onto the record (a hard crash between minting
+        // the user and saving, or a delete racing a redemption), so teardown can
+        // still remove it instead of leaking an enabled account. Assumes the
+        // guest username prefix has not changed since the link was created.
+        return _userManager.GetUserByName(BuildGuestUsername(record));
     }
 
     private async Task ApplyPolicyAsync(object user, ShareLinkRecord record, bool disabled, CancellationToken cancellationToken)
@@ -199,10 +209,13 @@ public sealed class JellyfinGuestUserService
         SetPolicyValue(policy, "EnabledFolders", Array.Empty<Guid>());
         SetPolicyValue(policy, "EnablePublicSharing", false);
         SetPolicyValue(policy, "LoginAttemptsBeforeLockout", -1);
-        // 0 means unlimited. A share link is meant to work every time until it
-        // expires or is revoked, including on several devices at once, so the
-        // guest is not capped to a single active session.
-        SetPolicyValue(policy, "MaxActiveSessions", 0);
+        // A share link works every time until it expires or is revoked, and on
+        // several devices at once, so it is not capped to one session. A finite
+        // cap is used rather than 0 (unlimited): each redemption mints a fresh
+        // session, so without a ceiling repeated opens (a reload loop, a chat
+        // app's link preview) would let sessions pile up unbounded for the life
+        // of the link. At this cap Jellyfin evicts the oldest session past it.
+        SetPolicyValue(policy, "MaxActiveSessions", 10);
         SetPolicyValue(policy, "BlockUnratedItems", Array.Empty<Jellyfin.Data.Enums.UnratedItem>());
 
         await InvokeUserManagerAsync<object?>(

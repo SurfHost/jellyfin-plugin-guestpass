@@ -110,7 +110,7 @@ public sealed class WebInjectionStartupFilter : IStartupFilter
 
             await context.Response.Body.WriteAsync(body).ConfigureAwait(false);
 
-            _status.ServedCount++;
+            _status.IncrementServed();
             _status.LastServedUtc = DateTimeOffset.UtcNow;
             _status.LastError = null;
 

@@ -22,17 +22,19 @@
     var lastContextItemId = null;
     var lastContextItemTs = 0;
     var historyPatched = false;
-    // Ids that only ever appear on a movie/episode/series/season context menu.
-    // Used to confirm an open action sheet really is a media menu before the
-    // fallback injects into it. The generic ids delete/edit/refresh/share/
-    // download were removed deliberately: they also appear on the user card menu
-    // on the Users dashboard, which made GuestPass show up there. Every media
-    // menu an admin sees still carries editmetadata, refreshmetadata and
-    // identify, so detection stays reliable for movies and series.
+    // data-id values that appear only on a movie/episode/series/season context
+    // menu in jellyfin-web 10.11, used to confirm an open action sheet really is
+    // a media menu before the fallback injects into it. These are the real ids
+    // from jellyfin-web's itemContextMenu.js. A movie or episode is anchored by
+    // identify/editimages/editsubtitles/addtoplaylist/copy-stream; a series or
+    // season (a folder) by identify/editimages/shuffle/addtocollection.
+    //
+    // The generic ids edit (Edit metadata), refresh (Refresh metadata) and delete
+    // are deliberately NOT listed: they also appear on the user card menu on the
+    // Users dashboard, which is what made GuestPass wrongly show up there.
     var itemMenuActionIds = [
-        'moreinfo', 'mediainfo', 'editmetadata', 'editimages', 'editsubtitles',
-        'editlyrics', 'identify', 'refreshmetadata', 'addtoplaylist',
-        'addtocollection', 'instantmix', 'shuffle', 'copy-stream', 'copystream'
+        'identify', 'editimages', 'editsubtitles', 'addtoplaylist',
+        'addtocollection', 'shuffle', 'copy-stream', 'moremediainfo'
     ];
     var durationOptions = [
         { label: '1 hour', hours: 1 },
