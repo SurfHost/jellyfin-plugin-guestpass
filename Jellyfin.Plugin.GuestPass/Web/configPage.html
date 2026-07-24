@@ -19,6 +19,26 @@
             margin-top: 0.25rem;
         }
 
+        #GuestPassConfigPage .sl-status {
+            padding: 0.75em 1em;
+            border-radius: 0.3em;
+            border-left: 0.35em solid #666;
+            background: rgba(255, 255, 255, 0.06);
+            margin-bottom: 0.5em;
+        }
+
+        #GuestPassConfigPage .sl-status-ok {
+            border-left-color: #3aa655;
+        }
+
+        #GuestPassConfigPage .sl-status-warn {
+            border-left-color: #d8a13a;
+        }
+
+        #GuestPassConfigPage .sl-status-bad {
+            border-left-color: #cc3b3b;
+        }
+
         #GuestPassConfigPage .sl-muted {
             color: var(--theme-secondary-color, #666);
         }
@@ -89,6 +109,12 @@
                 </div>
 
                 <div class="sl-section">
+                    <h3 class="sectionTitle">Client script injection</h3>
+                    <div id="InjectionStatus" class="sl-status sl-status-unknown">Checking…</div>
+                    <div class="fieldDescription" id="InjectionDetail"></div>
+                </div>
+
+                <div class="sl-section">
                     <h3 class="sectionTitle">General</h3>
                     <div class="sl-grid">
                         <div class="checkboxContainer checkboxContainer-withDescription">
@@ -96,6 +122,18 @@
                                 <input is="emby-checkbox" type="checkbox" id="Enabled" />
                                 <span>Enable GuestPass</span>
                             </label>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label>
+                                <input is="emby-checkbox" type="checkbox" id="InjectionEnabled" />
+                                <span>Inject the client script into the web client</span>
+                            </label>
+                            <div class="fieldDescription">
+                                Adds the GuestPass entry to the item context menu. Turn this off to disable the menu entry
+                                without uninstalling, for example if a Jellyfin update ever breaks it. Takes effect on the
+                                next page load; no restart needed.
+                            </div>
                         </div>
 
                         <div class="checkboxContainer checkboxContainer-withDescription">
@@ -211,7 +249,8 @@
                     page.querySelector('#DefaultExpiryHours').value = cfg.DefaultExpiryHours || 24;
                     page.querySelector('#MaxExpiryHours').value = cfg.MaxExpiryHours || 720;
                     page.querySelector('#PublicBaseUrlOverride').value = cfg.PublicBaseUrlOverride || '';
-                    page.querySelector('#GuestUsernamePrefix').value = cfg.GuestUsernamePrefix || 'share-';
+                    page.querySelector('#GuestUsernamePrefix').value = cfg.GuestUsernamePrefix || 'guest-';
+                    page.querySelector('#InjectionEnabled').checked = cfg.InjectionEnabled !== false;
                     page.querySelector('#GuestHiddenSelectors').value = cfg.GuestHiddenSelectors != null ? cfg.GuestHiddenSelectors : '';
                     page.querySelector('#AllowTranscoding').checked = cfg.AllowTranscoding !== false;
                     page.querySelector('#AllowRemuxing').checked = cfg.AllowRemuxing !== false;
@@ -220,6 +259,40 @@
                     page.querySelector('#GuestModeLockdownEnabled').checked = cfg.GuestModeLockdownEnabled !== false;
                 }).finally(function () {
                     Dashboard.hideLoadingMsg();
+                });
+            }
+
+            function loadInjectionStatus() {
+                var box = page.querySelector('#InjectionStatus');
+                var detail = page.querySelector('#InjectionDetail');
+                return ApiClient.ajax({
+                    type: 'GET',
+                    url: ApiClient.getUrl('GuestPass/Admin/InjectionStatus'),
+                    dataType: 'json'
+                }).then(function (status) {
+                    var cls = 'sl-status ';
+                    if (!status.Enabled) {
+                        cls += 'sl-status-warn';
+                    } else if (status.Healthy) {
+                        cls += 'sl-status-ok';
+                    } else if (status.LastError || !status.FilterInstalled) {
+                        cls += 'sl-status-bad';
+                    } else {
+                        cls += 'sl-status-warn';
+                    }
+
+                    box.className = cls;
+                    box.textContent = status.Summary || '';
+
+                    var bits = [];
+                    if (status.WebPath) { bits.push('Web root: ' + status.WebPath); }
+                    bits.push('Pages served: ' + (status.ServedCount || 0));
+                    if (status.LastServedUtc) { bits.push('Last served: ' + fmtDate(status.LastServedUtc)); }
+                    detail.textContent = bits.join(' · ');
+                }).catch(function () {
+                    box.className = 'sl-status sl-status-bad';
+                    box.textContent = 'Could not reach the GuestPass API. If you just installed or updated the plugin, restart Jellyfin.';
+                    detail.textContent = '';
                 });
             }
 
@@ -392,7 +465,8 @@
                     cfg.DefaultExpiryHours = parseInt(page.querySelector('#DefaultExpiryHours').value, 10) || 24;
                     cfg.MaxExpiryHours = parseInt(page.querySelector('#MaxExpiryHours').value, 10) || 720;
                     cfg.PublicBaseUrlOverride = page.querySelector('#PublicBaseUrlOverride').value.trim();
-                    cfg.GuestUsernamePrefix = page.querySelector('#GuestUsernamePrefix').value.trim() || 'share-';
+                    cfg.GuestUsernamePrefix = page.querySelector('#GuestUsernamePrefix').value.trim() || 'guest-';
+                    cfg.InjectionEnabled = page.querySelector('#InjectionEnabled').checked;
                     cfg.GuestHiddenSelectors = page.querySelector('#GuestHiddenSelectors').value;
                     cfg.AllowTranscoding = page.querySelector('#AllowTranscoding').checked;
                     cfg.AllowRemuxing = page.querySelector('#AllowRemuxing').checked;
@@ -401,7 +475,7 @@
                     cfg.GuestModeLockdownEnabled = page.querySelector('#GuestModeLockdownEnabled').checked;
                     ApiClient.updatePluginConfiguration(GuestPassPluginId, cfg).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
-                        return loadLinks();
+                        return loadLinks().then(loadInjectionStatus);
                     }).finally(function () {
                         Dashboard.hideLoadingMsg();
                     });
@@ -411,7 +485,7 @@
 
             document.querySelector('#GuestPassConfigPage').addEventListener('pageshow', function () {
                 page = this;
-                loadConfig().then(loadLinks);
+                loadConfig().then(loadLinks).then(loadInjectionStatus);
             });
 
             document.querySelector('#GuestPassConfigForm').addEventListener('submit', save);

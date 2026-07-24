@@ -1,6 +1,11 @@
 (function () {
     var pluginId = '9c80a3c0-a449-47eb-8a61-56dfd672896b';
     var copyLabel = 'Copy Stream URL';
+    // Copy verbs, lowercased, matched as substrings so one entry covers a whole
+    // family: 'kopi' catches Dutch kopieren/kopieeren, German kopieren, Swedish
+    // kopiera, Polish kopiuj, Czech kopirovat. 'copi' catches Italian copia and
+    // Spanish/Portuguese copiar.
+    var copyVerbs = ['copy', 'copi', 'kopi', 'masol', 'kopyala', 'antigraf', 'kopiro', 'copie'];
     var actionLabel = 'GuestPass';
     var clientVersion = '1.0.1-ui-2';
     var allowedItemStorageKey = 'guestpass.allowedItemId';
@@ -460,9 +465,29 @@
             return false;
         }
 
-        return value === copyLabel.toLowerCase()
-            || (value.indexOf('copy') >= 0 && value.indexOf('stream') >= 0 && value.indexOf('url') >= 0)
-            || (value.indexOf('copier') >= 0 && value.indexOf('url') >= 0 && (value.indexOf('flux') >= 0 || value.indexOf('stream') >= 0));
+        if (value === copyLabel.toLowerCase()) {
+            return true;
+        }
+
+        // Upstream only recognised English and French, so on any other interface
+        // the primary scan found nothing and the entry fell through to being
+        // inserted at the top of the menu. Dutch is "Stream-URL kopieren", German
+        // the same, and neither contains 'copy' or 'copier'.
+        //
+        // "URL" and "stream" are left untranslated in most Jellyfin locales, so
+        // requiring both tokens plus a copy verb generalises without getting
+        // loose. French is the notable exception, translating stream to flux.
+        if (value.indexOf('url') < 0) {
+            return false;
+        }
+
+        if (value.indexOf('stream') < 0 && value.indexOf('flux') < 0) {
+            return false;
+        }
+
+        return copyVerbs.some(function (verb) {
+            return value.indexOf(verb) >= 0;
+        });
     }
 
     function insertIntoOpenMenuFallback() {

@@ -11,6 +11,7 @@ using Jellyfin.Plugin.GuestPass.Configuration;
 using Jellyfin.Plugin.GuestPass.Models;
 using Jellyfin.Plugin.GuestPass.Services;
 using Jellyfin.Plugin.GuestPass.Storage;
+using Jellyfin.Plugin.GuestPass.Web;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
@@ -98,6 +99,41 @@ public sealed class ShareLinkGuestStateDto
     public string? HiddenSelectors { get; set; }
 }
 
+/// <summary>
+/// Reports whether the client-script injection is actually working. The whole
+/// reason this plugin exists is that upstream's injection failure was invisible,
+/// so it is reported here rather than only in the server log.
+/// </summary>
+public sealed class InjectionStatusDto
+{
+    /// <summary>Gets or sets a value indicating whether injection is enabled in configuration.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the startup filter was registered and ran.</summary>
+    public bool FilterInstalled { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether index.html could be read.</summary>
+    public bool IndexReadable { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether everything is working.</summary>
+    public bool Healthy { get; set; }
+
+    /// <summary>Gets or sets how many patched pages have been served since startup.</summary>
+    public long ServedCount { get; set; }
+
+    /// <summary>Gets or sets when a patched page was last served.</summary>
+    public DateTimeOffset? LastServedUtc { get; set; }
+
+    /// <summary>Gets or sets the resolved Jellyfin web root.</summary>
+    public string? WebPath { get; set; }
+
+    /// <summary>Gets or sets the last error, if any.</summary>
+    public string? LastError { get; set; }
+
+    /// <summary>Gets or sets a human-readable summary for the configuration page.</summary>
+    public string? Summary { get; set; }
+}
+
 /// <summary>GuestPass API surface.</summary>
 [ApiController]
 [Route("GuestPass")]
@@ -108,6 +144,7 @@ public sealed class GuestPassController : ControllerBase
     private readonly ShareLinkCleanupService _cleanupService;
     private readonly ShareLinkRedemptionService _redemptionService;
     private readonly ShareLinkStore _store;
+    private readonly WebInjectionStatus _injectionStatus;
     private readonly ILogger<GuestPassController> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="GuestPassController"/> class.</summary>
@@ -117,6 +154,7 @@ public sealed class GuestPassController : ControllerBase
         ShareLinkCleanupService cleanupService,
         ShareLinkRedemptionService redemptionService,
         ShareLinkStore store,
+        WebInjectionStatus injectionStatus,
         ILogger<GuestPassController> logger)
     {
         _libraryManager = libraryManager;
@@ -124,6 +162,7 @@ public sealed class GuestPassController : ControllerBase
         _cleanupService = cleanupService;
         _redemptionService = redemptionService;
         _store = store;
+        _injectionStatus = injectionStatus;
         _logger = logger;
     }
 
@@ -262,6 +301,59 @@ public sealed class GuestPassController : ControllerBase
         }
 
         return Ok(ToDto(record));
+    }
+
+    /// <summary>Reports whether the client-script injection is working.</summary>
+    [HttpGet("Admin/InjectionStatus")]
+    [Authorize(AuthenticationSchemes = "CustomAuthentication")]
+    public ActionResult<InjectionStatusDto> InjectionStatus()
+    {
+        SetNoStoreHeaders();
+        if (!User.IsInRole("Administrator"))
+        {
+            return Forbid();
+        }
+
+        var enabled = Config.InjectionEnabled;
+        var healthy = enabled
+            && _injectionStatus.FilterInstalled
+            && _injectionStatus.LastError is null
+            && _injectionStatus.ServedCount > 0;
+
+        string summary;
+        if (!enabled)
+        {
+            summary = "Injection is turned off in the settings below, so the GuestPass entry will not appear in the context menu.";
+        }
+        else if (!_injectionStatus.FilterInstalled)
+        {
+            summary = "The injection middleware is not installed. Restart Jellyfin: it is only wired up when the server process starts.";
+        }
+        else if (_injectionStatus.LastError is not null)
+        {
+            summary = "Injection failed: " + _injectionStatus.LastError;
+        }
+        else if (_injectionStatus.ServedCount == 0)
+        {
+            summary = "Ready, but no page has been served yet. Reload the Jellyfin web client once, then refresh this page.";
+        }
+        else
+        {
+            summary = "Working. The client script is being injected into the web client in memory; index.html on disk is untouched.";
+        }
+
+        return Ok(new InjectionStatusDto
+        {
+            Enabled = enabled,
+            FilterInstalled = _injectionStatus.FilterInstalled,
+            IndexReadable = _injectionStatus.IndexReadable,
+            Healthy = healthy,
+            ServedCount = _injectionStatus.ServedCount,
+            LastServedUtc = _injectionStatus.LastServedUtc,
+            WebPath = _injectionStatus.WebPath,
+            LastError = _injectionStatus.LastError,
+            Summary = summary
+        });
     }
 
     /// <summary>Returns the guest session state for the current authenticated user.</summary>
