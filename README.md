@@ -92,7 +92,3 @@ Changes made in this fork by [SurfHost](https://github.com/SurfHost):
 - a configuration toggle to disable the injection without uninstalling
 
 Licensed under the [GPL-3.0](LICENSE), like the original and like most Jellyfin plugins.
-
-Copyright (C) 2026 Franciskid
-
-Copyright (C) 2026 SurfHost
