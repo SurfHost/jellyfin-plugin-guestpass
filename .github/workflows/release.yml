@@ -1,0 +1,94 @@
+name: Release
+
+# Tag a commit v1.0.1.0 and push the tag. This builds the plugin, packages it,
+# publishes a GitHub release with the zip attached, and appends the new version
+# to manifest.json on main with the correct MD5, which is what Jellyfin verifies
+# the download against.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Resolve version from the tag
+        id: v
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag must be vN.N.N.N: Jellyfin parses this with System.Version and a" >&2
+            echo "non-numeric value throws, which silently empties the whole catalog." >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: |
+          dotnet publish Jellyfin.Plugin.GuestPass/Jellyfin.Plugin.GuestPass.csproj \
+            -c Release -f net9.0 --no-self-contained -o publish \
+            -p:Version=${{ steps.v.outputs.version }} \
+            -p:AssemblyVersion=${{ steps.v.outputs.version }} \
+            -p:FileVersion=${{ steps.v.outputs.version }}
+
+      - name: Package
+        id: pkg
+        run: |
+          VERSION="${{ steps.v.outputs.version }}"
+          # Keep meta.json's version in step with the tag.
+          jq --arg v "$VERSION" '.version = $v' Jellyfin.Plugin.GuestPass/meta.json > meta.json
+
+          # -j flattens paths. Jellyfin extracts the archive verbatim into
+          # <plugins>/<name>_<version>/, so a wrapper folder would nest and the
+          # plugin would never be found.
+          zip -j "guestpass_$VERSION.zip" publish/Jellyfin.Plugin.GuestPass.dll meta.json
+
+          # Fail loudly rather than shipping a package that installs and then
+          # silently does nothing. A private copy of these assemblies would give
+          # IStartupFilter a second type identity in the plugin load context.
+          if unzip -l "guestpass_$VERSION.zip" | grep -Eq 'Microsoft\.|MediaBrowser\.|/'; then
+            echo "Package contains nested paths or framework assemblies." >&2
+            unzip -l "guestpass_$VERSION.zip" >&2
+            exit 1
+          fi
+
+          echo "md5=$(md5sum "guestpass_$VERSION.zip" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "guestpass_${{ steps.v.outputs.version }}.zip" \
+            --title "$GITHUB_REF_NAME" --generate-notes --latest
+
+      - name: Add the version to manifest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.v.outputs.version }}"
+          jq --arg v "$VERSION" \
+             --arg sum "${{ steps.pkg.outputs.md5 }}" \
+             --arg url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/guestpass_${VERSION}.zip" \
+             --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+             '.[0].versions |= ([{version: $v, changelog: "See the GitHub release notes.", targetAbi: "10.11.0.0", sourceUrl: $url, checksum: $sum, timestamp: $ts}] + (map(select(.version != $v)) // []))' \
+             manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add manifest.json
+          git commit -m "Add $VERSION to the plugin manifest"
+          git push origin HEAD:main

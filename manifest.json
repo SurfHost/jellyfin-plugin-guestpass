@@ -1,28 +1,20 @@
 [
     {
-        "guid": "68540b76-ee74-436d-85ff-2abc884bbea6",
-        "name": "ShareLinks",
-        "description": "Adds secure, expiring guest-share links for Jellyfin items using temporary hidden users, one-use token redemption, restrictive policies, and scheduled cleanup.",
-        "overview": "Temporary guest links for Jellyfin movies and episodes.",
-        "owner": "Franciskid",
+        "guid": "9c80a3c0-a449-47eb-8a61-56dfd672896b",
+        "name": "GuestPass",
+        "description": "Send someone a temporary link to one movie, episode, season or series. They watch it without an account and without seeing the rest of your library. Injects its client script in memory, so it works on containers with a read-only or root-owned web root.",
+        "overview": "Expiring guest links for Jellyfin, no account needed.",
+        "owner": "SurfHost",
         "category": "General",
         "imageUrl": "",
         "versions": [
             {
-                "version": "1.0.1.0",
-                "changelog": "Series and seasons can now be shared, not just single movies and episodes: the share tags the whole tree so the guest can browse and play everything inside it, and cleanup strips it all again. Expired or invalid links now show a friendly page that redirects to the Jellyfin home instead of raw JSON. The guest hidden selectors setting now defaults to empty.",
-                "targetAbi": "10.11.0.0",
-                "sourceUrl": "https://github.com/Franciskid/jellyfin-plugin-sharelinks/releases/download/v1.0.1.0/sharelinks_1.0.1.0.zip",
-                "checksum": "7ea5363ee59c41a0daac7283c12c2d40",
-                "timestamp": "2026-07-08T00:15:00Z"
-            },
-            {
                 "version": "1.0.0.0",
-                "changelog": "ShareLink button on the item menu, temporary guest users confined by tag policy, expiring links with a date/time picker, admin dashboard with revoke, and a configurable guest lockdown that hides tag/genre/studio/cast links, the add-to-playlist and add-to-collection actions, and other plugins' UI. The creation popup is localized in English and French. Guest sessions are now minted server side: no password is ever stored or sent anywhere, the guest page only carries a session token, and expired guests are cleaned up every 30 minutes.",
+                "changelog": "First GuestPass release. Fork of Franciskid/jellyfin-plugin-sharelinks with the on-disk index.html rewrite replaced by in-memory IStartupFilter injection, so the plugin works on containers whose web root is not writable. Adds an injection status panel, a switch to disable injection without uninstalling, and context-menu matching for non-English web clients including Dutch and German.",
                 "targetAbi": "10.11.0.0",
-                "sourceUrl": "https://github.com/Franciskid/jellyfin-plugin-sharelinks/releases/download/v1.0.0.0/sharelinks_1.0.0.0.zip",
-                "checksum": "7fa7a31bf26f80307c75f87535c4f036",
-                "timestamp": "2026-07-07T23:18:38Z"
+                "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v1.0.0.0/guestpass_1.0.0.0.zip",
+                "checksum": "676aa4f4e6f9a7646b1c4581411b0791",
+                "timestamp": "2026-07-24T02:00:00Z"
             }
         ]
     }
