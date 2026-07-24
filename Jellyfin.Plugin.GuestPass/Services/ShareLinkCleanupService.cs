@@ -62,6 +62,32 @@ public sealed class ShareLinkCleanupService : IShareLinkCleanupService
         return await CleanupRecordInternalAsync(record, records, true, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Revokes a share link (full teardown of the guest user and item tags) and
+    /// then removes its record from the store, so it stops showing in the list.
+    /// Returns false if no record with that id exists.
+    /// </summary>
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var record = await _store.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
+        if (record is null)
+        {
+            return false;
+        }
+
+        // Same teardown as a revoke: disable and delete the guest user, strip the
+        // temporary tag from the item tree. Only then drop the record.
+        record.Status = ShareLinkStatus.Revoked;
+        record.CleanupError = null;
+        await _store.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
+
+        var records = await _store.ListAsync(cancellationToken).ConfigureAwait(false);
+        await CleanupRecordInternalAsync(record, records, true, cancellationToken).ConfigureAwait(false);
+
+        await _store.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
     /// <summary>Runs cleanup for one record by id.</summary>
     public async Task CleanupRecordAsync(Guid id, bool force, CancellationToken cancellationToken)
     {

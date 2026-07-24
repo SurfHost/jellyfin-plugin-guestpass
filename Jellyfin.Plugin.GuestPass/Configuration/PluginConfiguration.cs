@@ -36,8 +36,12 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets the cleanup interval, in minutes.</summary>
     public int CleanupIntervalMinutes { get; set; } = 60;
 
-    /// <summary>Gets or sets a value indicating whether links default to one use.</summary>
-    public bool OneUseDefault { get; set; } = true;
+    /// <summary>
+    /// Gets or sets a value indicating whether links default to one use. Retained
+    /// for configuration compatibility; one-use enforcement was removed so that a
+    /// link works every time until it expires or is revoked. Defaults to false.
+    /// </summary>
+    public bool OneUseDefault { get; set; }
 
     /// <summary>Gets or sets a value indicating whether guest-mode lockdown is enabled.</summary>
     public bool GuestModeLockdownEnabled { get; set; } = true;

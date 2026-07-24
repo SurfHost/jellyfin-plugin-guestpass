@@ -22,12 +22,17 @@
     var lastContextItemId = null;
     var lastContextItemTs = 0;
     var historyPatched = false;
+    // Ids that only ever appear on a movie/episode/series/season context menu.
+    // Used to confirm an open action sheet really is a media menu before the
+    // fallback injects into it. The generic ids delete/edit/refresh/share/
+    // download were removed deliberately: they also appear on the user card menu
+    // on the Users dashboard, which made GuestPass show up there. Every media
+    // menu an admin sees still carries editmetadata, refreshmetadata and
+    // identify, so detection stays reliable for movies and series.
     var itemMenuActionIds = [
         'moreinfo', 'mediainfo', 'editmetadata', 'editimages', 'editsubtitles',
-        'editlyrics', 'identify', 'refreshmetadata', 'refresh', 'playlist',
-        'addtoplaylist', 'addtocollection', 'instantmix', 'shuffle', 'resume',
-        'copy-stream', 'copystream', 'share', 'download', 'delete',
-        'edit'
+        'editlyrics', 'identify', 'refreshmetadata', 'addtoplaylist',
+        'addtocollection', 'instantmix', 'shuffle', 'copy-stream', 'copystream'
     ];
     var durationOptions = [
         { label: '1 hour', hours: 1 },

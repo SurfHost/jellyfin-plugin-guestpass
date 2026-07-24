@@ -53,8 +53,11 @@ public sealed class ShareLinkRecord
     /// <summary>Gets or sets the allowed tag snapshot, if any.</summary>
     public string? AllowedTag { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether the link may be used once only.</summary>
-    public bool OneUse { get; set; } = true;
+    /// <summary>
+    /// Gets or sets a value indicating whether the link may be used once only.
+    /// No longer enforced: a link works every time until it expires or is revoked.
+    /// </summary>
+    public bool OneUse { get; set; }
 
     /// <summary>Gets or sets a value indicating whether metadata was touched during cleanup.</summary>
     public bool MetadataTouched { get; set; }

@@ -199,7 +199,10 @@ public sealed class JellyfinGuestUserService
         SetPolicyValue(policy, "EnabledFolders", Array.Empty<Guid>());
         SetPolicyValue(policy, "EnablePublicSharing", false);
         SetPolicyValue(policy, "LoginAttemptsBeforeLockout", -1);
-        SetPolicyValue(policy, "MaxActiveSessions", 1);
+        // 0 means unlimited. A share link is meant to work every time until it
+        // expires or is revoked, including on several devices at once, so the
+        // guest is not capped to a single active session.
+        SetPolicyValue(policy, "MaxActiveSessions", 0);
         SetPolicyValue(policy, "BlockUnratedItems", Array.Empty<Jellyfin.Data.Enums.UnratedItem>());
 
         await InvokeUserManagerAsync<object?>(

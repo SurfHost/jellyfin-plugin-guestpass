@@ -19,6 +19,10 @@
             margin-top: 0.25rem;
         }
 
+        #GuestPassConfigPage .sl-danger {
+            background: #7a2323;
+        }
+
         #GuestPassConfigPage .sl-status {
             padding: 0.75em 1em;
             border-radius: 0.3em;
@@ -136,13 +140,6 @@
                             </div>
                         </div>
 
-                        <div class="checkboxContainer checkboxContainer-withDescription">
-                            <label>
-                                <input is="emby-checkbox" type="checkbox" id="OneUseDefault" />
-                                <span>Default one-use links</span>
-                            </label>
-                        </div>
-
                         <div class="sl-field inputContainer">
                             <input is="emby-input" type="number" id="DefaultExpiryHours" label="Default expiry (hours)" min="1" max="8760" />
                             <div class="fieldDescription">Used by the menu action when the admin accepts the default.</div>
@@ -255,7 +252,6 @@
                     page.querySelector('#AllowTranscoding').checked = cfg.AllowTranscoding !== false;
                     page.querySelector('#AllowRemuxing').checked = cfg.AllowRemuxing !== false;
                     page.querySelector('#CleanupIntervalMinutes').value = cfg.CleanupIntervalMinutes || 60;
-                    page.querySelector('#OneUseDefault').checked = cfg.OneUseDefault !== false;
                     page.querySelector('#GuestModeLockdownEnabled').checked = cfg.GuestModeLockdownEnabled !== false;
                 }).finally(function () {
                     Dashboard.hideLoadingMsg();
@@ -344,6 +340,9 @@
                         '<td class="sl-right">',
                         '<button is="emby-button" type="button" class="raised" data-id="', escapeHtml(record.Id), '">',
                         '<span>Revoke</span>',
+                        '</button> ',
+                        '<button is="emby-button" type="button" class="raised sl-danger" data-delete-id="', escapeHtml(record.Id), '">',
+                        '<span>Delete</span>',
                         '</button>',
                         '</td>',
                         '</tr>'
@@ -353,6 +352,12 @@
                 Array.from(body.querySelectorAll('button[data-id]')).forEach(function (button) {
                     button.addEventListener('click', function () {
                         revokeLink(button.getAttribute('data-id'));
+                    });
+                });
+
+                Array.from(body.querySelectorAll('button[data-delete-id]')).forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        deleteLink(button.getAttribute('data-delete-id'));
                     });
                 });
 
@@ -457,6 +462,36 @@
                 });
             }
 
+            function deleteLink(id) {
+                if (!id) {
+                    return;
+                }
+
+                var button = page.querySelector('button[data-delete-id="' + id + '"]');
+                if (button && button.getAttribute('data-confirm') !== '1') {
+                    button.setAttribute('data-confirm', '1');
+                    button.querySelector('span').textContent = 'Confirm delete';
+                    window.setTimeout(function () {
+                        if (button.isConnected && button.getAttribute('data-confirm') === '1') {
+                            button.removeAttribute('data-confirm');
+                            button.querySelector('span').textContent = 'Delete';
+                        }
+                    }, 3500);
+                    return;
+                }
+
+                Dashboard.showLoadingMsg();
+                ApiClient.ajax({
+                    type: 'POST',
+                    url: ApiClient.getUrl('GuestPass/Admin/Delete/' + id),
+                    dataType: 'json'
+                }).then(function () {
+                    return loadLinks();
+                }).finally(function () {
+                    Dashboard.hideLoadingMsg();
+                });
+            }
+
             function save(e) {
                 e.preventDefault();
                 Dashboard.showLoadingMsg();
@@ -471,7 +506,6 @@
                     cfg.AllowTranscoding = page.querySelector('#AllowTranscoding').checked;
                     cfg.AllowRemuxing = page.querySelector('#AllowRemuxing').checked;
                     cfg.CleanupIntervalMinutes = parseInt(page.querySelector('#CleanupIntervalMinutes').value, 10) || 60;
-                    cfg.OneUseDefault = page.querySelector('#OneUseDefault').checked;
                     cfg.GuestModeLockdownEnabled = page.querySelector('#GuestModeLockdownEnabled').checked;
                     ApiClient.updatePluginConfiguration(GuestPassPluginId, cfg).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);

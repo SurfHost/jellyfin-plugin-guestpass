@@ -303,6 +303,26 @@ public sealed class GuestPassController : ControllerBase
         return Ok(ToDto(record));
     }
 
+    /// <summary>Revokes a share link and then permanently removes its record.</summary>
+    [HttpPost("Admin/Delete/{id:guid}")]
+    [Authorize(AuthenticationSchemes = "CustomAuthentication")]
+    public async Task<ActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        SetNoStoreHeaders();
+        if (!User.IsInRole("Administrator"))
+        {
+            return Forbid();
+        }
+
+        var deleted = await _cleanupService.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
+        if (!deleted)
+        {
+            return NotFound(new { error = "Share link not found." });
+        }
+
+        return Ok(new { deleted = true });
+    }
+
     /// <summary>Reports whether the client-script injection is working.</summary>
     [HttpGet("Admin/InjectionStatus")]
     [Authorize(AuthenticationSchemes = "CustomAuthentication")]
@@ -448,7 +468,6 @@ public sealed class GuestPassController : ControllerBase
 <body>
 <main>
   <div>This share link is no longer valid.</div>
-  <div class="muted">Ce lien de partage n'est plus valide.</div>
   <div class="muted">Taking you to the home page...</div>
   <p><a href="{{redirectUrlHtml}}">Open Jellyfin</a></p>
 </main>

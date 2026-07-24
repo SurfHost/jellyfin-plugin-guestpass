@@ -9,6 +9,14 @@
         "imageUrl": "",
         "versions": [
             {
+                "version": "0.2.0",
+                "changelog": "Links now work every time until they expire or are revoked, instead of being one-time use, and work on several devices at once. Adds a Delete action that revokes a link and removes its record, so revoked links no longer pile up. The GuestPass entry no longer appears on the Users dashboard menu, only on movies, episodes, series and seasons. Removes the stray French line on the dead-link page.",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.0/guestpass_0.2.0.zip",
+                "checksum": "b32e262511d8138725b56baf1e1ac33d",
+                "timestamp": "2026-07-24T03:00:00Z"
+            },
+            {
                 "version": "0.1.0",
                 "changelog": "First GuestPass release. Fork of Franciskid/jellyfin-plugin-sharelinks with the on-disk index.html rewrite replaced by in-memory IStartupFilter injection, so the plugin works on containers whose web root is not writable. Adds an injection status panel, a switch to disable injection without uninstalling, and context-menu matching for non-English web clients including Dutch and German.",
                 "targetAbi": "10.11.0.0",

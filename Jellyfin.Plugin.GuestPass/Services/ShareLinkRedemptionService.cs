@@ -92,15 +92,12 @@ public sealed class ShareLinkRedemptionService
             record.MetadataTouched = true;
         }
 
-        if (record.OneUse && record.Status == ShareLinkStatus.Redeemed)
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(record.DeviceId))
-        {
-            record.DeviceId = Guid.NewGuid().ToString("N");
-        }
+        // A share link works every time until it expires or is revoked/deleted:
+        // a redeemed record is re-redeemed here rather than being locked out.
+        // A fresh device id per redemption gives each viewer (or each device) its
+        // own session, so opening the same link on several devices at once works
+        // instead of the sessions replacing one another.
+        record.DeviceId = Guid.NewGuid().ToString("N");
 
         record.Status = ShareLinkStatus.Redeeming;
         record.CleanupError = null;
