@@ -1,45 +1,45 @@
 [
-    {
-        "guid": "9c80a3c0-a449-47eb-8a61-56dfd672896b",
-        "name": "GuestPass",
-        "description": "Send someone a temporary link to one movie, episode, season or series. They watch it without an account and without seeing the rest of your library. Injects its client script in memory, so it works on containers with a read-only or root-owned web root.",
-        "overview": "Expiring guest links for Jellyfin, no account needed.",
-        "owner": "SurfHost",
-        "category": "General",
-        "imageUrl": "",
-        "versions": [
-            {
-                "version": "0.2.2",
-                "changelog": "Two fixes. GuestPass no longer appears on non-media menus such as the Users dashboard: the entry is only added after the server confirms the item is a movie, episode, series or season, instead of guessing from menu ids. Opening a share link no longer logs you out: if the browser already has a working sign-in for this server, that session is kept and the shared title just opens in it, instead of the guest session overwriting your login (which previously left you on a black page after the link was revoked). If you do get stuck on a black page from an older link, clear the site's storage or run localStorage.clear() in the console.",
-                "targetAbi": "10.11.0.0",
-                "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.2/guestpass_0.2.2.zip",
-                "checksum": "4ea62a10eeb0eae9b7dad3c043f5a6c4",
-                "timestamp": "2026-07-24T05:00:00Z"
-            },
-            {
-                "version": "0.2.1",
-                "changelog": "Hardening from a code review of 0.2.0. Deleting a link no longer removes its record when teardown failed, so a failed cleanup stays visible and is retried instead of silently orphaning a guest user or tag. Guest teardown now finds the guest user by its deterministic name as a last resort, closing a window where a crash or a delete racing a redemption could leave an enabled guest account behind. The guest session count is capped instead of unlimited, so repeated opens of a link cannot pile up sessions without bound. Corrected the context-menu detection to jellyfin-web's real action ids. No change to how you create, share or revoke links.",
-                "targetAbi": "10.11.0.0",
-                "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.1/guestpass_0.2.1.zip",
-                "checksum": "d0a804e25694b39c0eadb5be6354072e",
-                "timestamp": "2026-07-24T04:00:00Z"
-            },
-            {
-                "version": "0.2.0",
-                "changelog": "Links now work every time until they expire or are revoked, instead of being one-time use, and work on several devices at once. Adds a Delete action that revokes a link and removes its record, so revoked links no longer pile up. The GuestPass entry no longer appears on the Users dashboard menu, only on movies, episodes, series and seasons. Removes the stray French line on the dead-link page.",
-                "targetAbi": "10.11.0.0",
-                "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.0/guestpass_0.2.0.zip",
-                "checksum": "b32e262511d8138725b56baf1e1ac33d",
-                "timestamp": "2026-07-24T03:00:00Z"
-            },
-            {
-                "version": "0.1.0",
-                "changelog": "First GuestPass release. Fork of Franciskid/jellyfin-plugin-sharelinks with the on-disk index.html rewrite replaced by in-memory IStartupFilter injection, so the plugin works on containers whose web root is not writable. Adds an injection status panel, a switch to disable injection without uninstalling, and context-menu matching for non-English web clients including Dutch and German.",
-                "targetAbi": "10.11.0.0",
-                "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.1.0/guestpass_0.1.0.zip",
-                "checksum": "e9dcbf634b2726419af6a5cbd8e14960",
-                "timestamp": "2026-07-24T02:00:00Z"
-            }
-        ]
-    }
+  {
+    "guid": "9c80a3c0-a449-47eb-8a61-56dfd672896b",
+    "name": "GuestPass",
+    "description": "Send someone a temporary link to one movie, episode, season or series. They watch it without an account and without seeing the rest of your library. Injects its client script in memory, so it works on containers with a read-only or root-owned web root.",
+    "overview": "Expiring guest links for Jellyfin, no account needed.",
+    "owner": "SurfHost",
+    "category": "General",
+    "imageUrl": "",
+    "versions": [
+      {
+        "version": "0.2.2",
+        "changelog": "Two fixes. GuestPass no longer appears on non-media menus such as the Users dashboard: the entry is only added after the server confirms the item is a movie, episode, series or season, instead of guessing from menu ids. Opening a share link no longer logs you out: if the browser already has a working sign-in for this server, that session is kept and the shared title just opens in it, instead of the guest session overwriting your login (which previously left you on a black page after the link was revoked). If you do get stuck on a black page from an older link, clear the site's storage or run localStorage.clear() in the console.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.2/guestpass_0.2.2.zip",
+        "checksum": "8c7aa3c2163d82511413455041b650f1",
+        "timestamp": "2026-07-24T21:06:44Z"
+      },
+      {
+        "version": "0.2.1",
+        "changelog": "Hardening from a code review of 0.2.0. Deleting a link no longer removes its record when teardown failed, so a failed cleanup stays visible and is retried instead of silently orphaning a guest user or tag. Guest teardown now finds the guest user by its deterministic name as a last resort, closing a window where a crash or a delete racing a redemption could leave an enabled guest account behind. The guest session count is capped instead of unlimited, so repeated opens of a link cannot pile up sessions without bound. Corrected the context-menu detection to jellyfin-web's real action ids. No change to how you create, share or revoke links.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.1/guestpass_0.2.1.zip",
+        "checksum": "d0a804e25694b39c0eadb5be6354072e",
+        "timestamp": "2026-07-24T04:00:00Z"
+      },
+      {
+        "version": "0.2.0",
+        "changelog": "Links now work every time until they expire or are revoked, instead of being one-time use, and work on several devices at once. Adds a Delete action that revokes a link and removes its record, so revoked links no longer pile up. The GuestPass entry no longer appears on the Users dashboard menu, only on movies, episodes, series and seasons. Removes the stray French line on the dead-link page.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.0/guestpass_0.2.0.zip",
+        "checksum": "b32e262511d8138725b56baf1e1ac33d",
+        "timestamp": "2026-07-24T03:00:00Z"
+      },
+      {
+        "version": "0.1.0",
+        "changelog": "First GuestPass release. Fork of Franciskid/jellyfin-plugin-sharelinks with the on-disk index.html rewrite replaced by in-memory IStartupFilter injection, so the plugin works on containers whose web root is not writable. Adds an injection status panel, a switch to disable injection without uninstalling, and context-menu matching for non-English web clients including Dutch and German.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.1.0/guestpass_0.1.0.zip",
+        "checksum": "e9dcbf634b2726419af6a5cbd8e14960",
+        "timestamp": "2026-07-24T02:00:00Z"
+      }
+    ]
+  }
 ]
