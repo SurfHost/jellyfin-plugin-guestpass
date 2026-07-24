@@ -1,0 +1,12 @@
+{
+  "guid": "9c80a3c0-a449-47eb-8a61-56dfd672896b",
+  "name": "GuestPass",
+  "version": "1.0.0.0",
+  "targetAbi": "10.11.0.0",
+  "framework": "net9.0",
+  "owner": "SurfHost",
+  "overview": "Expiring guest links for Jellyfin, no account needed.",
+  "description": "Send someone a temporary link to one movie, episode, season or series. They watch it without an account and without seeing the rest of your library. Injects its client script in memory, so it works on containers with a read-only web root.",
+  "category": "General",
+  "timestamp": "2026-07-24T01:00:00.0000000Z"
+}

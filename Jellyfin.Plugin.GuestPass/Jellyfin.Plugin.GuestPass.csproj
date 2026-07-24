@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Jellyfin.Plugin.GuestPass</RootNamespace>
+    <AssemblyName>Jellyfin.Plugin.GuestPass</AssemblyName>
+    <Version>1.0.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Company>SurfHost</Company>
+    <Authors>SurfHost</Authors>
+    <!--
+      Never copy referenced Jellyfin/ASP.NET assemblies next to the plugin dll.
+      Jellyfin loads every dll it finds in the plugin folder into a separate
+      PluginLoadContext, so a private copy of these would give IStartupFilter a
+      second type identity and the middleware registration would be silently
+      ignored with nothing logged at all. See Web/WebInjectionStartupFilter.cs.
+    -->
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.0">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only the client assets ship inside the dll, never the .cs sources. -->
+    <EmbeddedResource Include="Web\**\*.js" />
+    <EmbeddedResource Include="Web\**\*.html" />
+  </ItemGroup>
+
+</Project>
