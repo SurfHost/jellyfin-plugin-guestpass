@@ -13,8 +13,8 @@
         "changelog": "See the GitHub release notes.",
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.3/guestpass_0.2.3.zip",
-        "checksum": "b3cc76af92f0f1fc78dc2f469c2fb39d",
-        "timestamp": "2026-07-25T09:00:30Z"
+        "checksum": "3596219d090ed07bf3e9d20e86be21e4",
+        "timestamp": "2026-07-25T09:35:33Z"
       },
       {
         "version": "0.2.2",
