@@ -9,6 +9,14 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "0.2.3",
+        "changelog": "See the GitHub release notes.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/SurfHost/jellyfin-plugin-guestpass/releases/download/v0.2.3/guestpass_0.2.3.zip",
+        "checksum": "b3cc76af92f0f1fc78dc2f469c2fb39d",
+        "timestamp": "2026-07-25T09:00:30Z"
+      },
+      {
         "version": "0.2.2",
         "changelog": "Two fixes. GuestPass no longer appears on non-media menus such as the Users dashboard: the entry is only added after the server confirms the item is a movie, episode, series or season, instead of guessing from menu ids. Opening a share link no longer logs you out: if the browser already has a working sign-in for this server, that session is kept and the shared title just opens in it, instead of the guest session overwriting your login (which previously left you on a black page after the link was revoked). If you do get stuck on a black page from an older link, clear the site's storage or run localStorage.clear() in the console.",
         "targetAbi": "10.11.0.0",
