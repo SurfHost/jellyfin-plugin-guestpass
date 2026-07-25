@@ -2,7 +2,7 @@
   {
     "guid": "9c80a3c0-a449-47eb-8a61-56dfd672896b",
     "name": "GuestPass",
-    "description": "Send someone a temporary link to one movie, episode, season or series. They watch it without an account and without seeing the rest of your library. Injects its client script in memory, so it works on containers with a read-only or root-owned web root.",
+    "description": "Send someone a temporary link to one movie, episode, season or series. They watch it without an account and without seeing the rest of your library. Injects its client script in memory, so it works on containers with a read-only or root-owned web root. GPL-3.0 fork of Franciskid/jellyfin-plugin-sharelinks.",
     "overview": "Expiring guest links for Jellyfin, no account needed.",
     "owner": "SurfHost",
     "category": "General",

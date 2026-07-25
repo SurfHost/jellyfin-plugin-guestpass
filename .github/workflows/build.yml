@@ -1,0 +1,73 @@
+name: Build
+
+# Compile checks for every push and pull request. Release.yml already builds the
+# plugin, but it only runs on tags, so before this workflow existed nothing at all
+# verified that main compiled. A broken main was only discovered at release time.
+#
+# Deliberately kept to things that cannot produce a false failure: a restore, a
+# Release build, a formatting check and a dependency advisory check. There is no
+# test project in this repo yet, so there is no test job to run.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Per ref, so a second push to a branch cancels the first, but main and PRs
+  # never cancel each other.
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT: Jellyfin.Plugin.GuestPass/Jellyfin.Plugin.GuestPass.csproj
+  # Keep restore off whatever sources the runner image happens to have configured.
+  # NuGet.config in the repo root clears the source list and pins nuget.org.
+  NUGET_CONFIG: NuGet.config
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore "$PROJECT" --configfile "$NUGET_CONFIG"
+
+      - name: Build
+        # --no-restore so this step fails on a compile error rather than quietly
+        # re-restoring with different sources than the step above.
+        run: dotnet build "$PROJECT" -c Release --no-restore
+
+      - name: Verify formatting
+        # The default severity (info) is used because the tree is already clean at that
+        # level, checked against SDK 9.0.316. If a future SDK starts reporting new
+        # info-level suggestions and this turns noisy on files nobody touched, add
+        # "--severity warn" rather than dropping the step. Run "dotnet format
+        # Jellyfin.Plugin.GuestPass/Jellyfin.Plugin.GuestPass.csproj" locally to fix.
+        run: dotnet format "$PROJECT" --verify-no-changes --no-restore
+
+      - name: Check dependencies for known vulnerabilities
+        # dotnet list package exits 0 whether or not it found anything, so the exit
+        # code cannot be used as the gate. Grep its report instead. Transitive
+        # packages are included because the only direct reference is
+        # Jellyfin.Controller, which is where the actual dependency surface comes from.
+        run: |
+          # Report goes to the runner temp dir, not the workspace, so nothing shows up
+          # as an untracked file when this is run locally.
+          REPORT="${RUNNER_TEMP:-.}/vulnerable.txt"
+          dotnet list "$PROJECT" package --vulnerable --include-transitive \
+            --configfile "$NUGET_CONFIG" > "$REPORT" 2>&1 || true
+          cat "$REPORT"
+          if grep -q 'has the following vulnerable packages' "$REPORT"; then
+            echo "::error::Vulnerable NuGet packages reported above." >&2
+            exit 1
+          fi
+          echo "No known-vulnerable packages reported."

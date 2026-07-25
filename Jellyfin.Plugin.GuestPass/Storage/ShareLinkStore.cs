@@ -85,6 +85,55 @@ public sealed class ShareLinkStore
         }
     }
 
+    /// <summary>
+    /// Removes the legacy <c>ShareUrl</c> field from a store written by v0.2.2 or earlier.
+    /// That field held the full share URL including the raw token in its query string, so a
+    /// store carried redeemable credentials alongside their own hashes. Deserialization
+    /// already drops the unknown property, so loading and saving once is enough to rewrite
+    /// the file without it. Runs at startup and is a no-op on an already-clean store.
+    /// </summary>
+    /// <returns>The number of records whose stored URL was discarded.</returns>
+    public async Task<int> ScrubLegacyShareUrlsAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!File.Exists(_path))
+            {
+                return 0;
+            }
+
+            string raw;
+            try
+            {
+                raw = await File.ReadAllTextAsync(_path, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "GuestPass: could not read the record store to scrub legacy share URLs.");
+                return 0;
+            }
+
+            // Cheap textual probe: the property is gone from the model, so it cannot be
+            // observed after deserialization.
+            if (raw.IndexOf("\"ShareUrl\"", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                return 0;
+            }
+
+            var records = await LoadUnlockedAsync(cancellationToken).ConfigureAwait(false);
+            await SortAndSaveUnlockedAsync(records, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation(
+                "GuestPass: removed the legacy ShareUrl field from {Count} stored record(s). Those URLs contained raw share tokens; existing links keep working, but they can no longer be re-read from disk.",
+                records.Count);
+            return records.Count;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     /// <summary>Inserts or replaces a share-link record.</summary>
     public async Task UpsertAsync(ShareLinkRecord record, CancellationToken cancellationToken = default)
     {

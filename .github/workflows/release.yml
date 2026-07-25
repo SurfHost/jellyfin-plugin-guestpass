@@ -11,6 +11,11 @@ name: Release
 #
 # To cut a release: bump <Version> in the csproj and "version" in meta.json,
 # commit to main, then either push a tag vX.Y.Z or run this workflow manually.
+#
+# The version-gate job below refuses the release when those files disagree with the
+# tag, because the release job builds from main rather than from the tagged commit:
+# a tag whose meta.json says something else would publish main's code under the
+# tag's name, and the two would silently drift apart.
 on:
   workflow_dispatch:
   push:
@@ -25,7 +30,88 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Release discipline: everything that names a version has to agree before a single
+  # artifact is built or published. Kept as its own job so a mismatch fails fast and
+  # visibly, and so the release job below stays about building and publishing.
+  version-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      # No "ref:" here on purpose. This checks out whatever was pushed (the tagged
+      # commit), which is the thing whose version claims are being verified.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify the tag, meta.json, the csproj and manifest.json agree
+        id: check
+        run: |
+          set -euo pipefail
+
+          META=$(jq -r '.version' Jellyfin.Plugin.GuestPass/meta.json)
+          if ! printf '%s' "$META" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "meta.json version must be MAJOR.MINOR.PATCH, got '$META'." >&2
+            exit 1
+          fi
+
+          CSPROJ=Jellyfin.Plugin.GuestPass/Jellyfin.Plugin.GuestPass.csproj
+          fail=0
+          for prop in Version AssemblyVersion FileVersion; do
+            value=$(sed -n "s:.*<${prop}>\(.*\)</${prop}>.*:\1:p" "$CSPROJ" | head -1)
+            if [ "$value" != "$META" ]; then
+              echo "$CSPROJ <$prop> is '$value' but meta.json says '$META'." >&2
+              fail=1
+            fi
+          done
+
+          # A drifted guid would make Jellyfin treat the release as a different
+          # plugin, so installs would not upgrade, they would sit side by side.
+          META_GUID=$(jq -r '.guid' Jellyfin.Plugin.GuestPass/meta.json)
+          MANIFEST_GUID=$(jq -r '.[0].guid' manifest.json)
+          if [ "$META_GUID" != "$MANIFEST_GUID" ]; then
+            echo "manifest.json guid '$MANIFEST_GUID' does not match meta.json guid '$META_GUID'." >&2
+            fail=1
+          fi
+
+          # manifest.json is written by the release job after the zip exists, so an
+          # entry for a brand new version is legitimately absent here. Only check it
+          # when it is already present, in which case it must point at this tag.
+          EXPECTED_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${META}/guestpass_${META}.zip"
+          ENTRY_URL=$(jq -r --arg v "$META" '(.[0].versions[] | select(.version==$v) | .sourceUrl) // ""' manifest.json)
+          if [ -n "$ENTRY_URL" ] && [ "$ENTRY_URL" != "$EXPECTED_URL" ]; then
+            echo "manifest.json entry for $META points at '$ENTRY_URL', expected '$EXPECTED_URL'." >&2
+            fail=1
+          fi
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+            if [ "$TAG" != "v$META" ]; then
+              echo "Tag '$TAG' does not match the version in meta.json ('$META'). Expected 'v$META'." >&2
+              fail=1
+            fi
+
+            # The release job builds main, so a tag that is not on main would ship
+            # code the tag does not point at.
+            git fetch --no-tags origin main
+            if ! git merge-base --is-ancestor "$GITHUB_SHA" "$(git rev-parse FETCH_HEAD)"; then
+              echo "Tag '$TAG' is not an ancestor of main, but the release is built from main." >&2
+              fail=1
+            fi
+          else
+            echo "Manual run, so there is no tag to compare. Checking the files only."
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            echo "Refusing to release: version metadata disagrees. Fix the files above, commit to main, then re-tag." >&2
+            exit 1
+          fi
+
+          echo "version=$META" >> "$GITHUB_OUTPUT"
+          echo "All version metadata agrees on $META."
+
   release:
+    needs: version-gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +131,17 @@ jobs:
             echo "meta.json version must be MAJOR.MINOR.PATCH, got '$VERSION'." >&2
             exit 1
           fi
+
+          # This job builds main while the gate inspected the tagged commit. If main
+          # has moved on to a different version since the tag was pushed, the two
+          # disagree and publishing would put main's newer code under the old tag's
+          # name. Stop instead, and let the newer version get its own tag.
+          GATED="${{ needs.version-gate.outputs.version }}"
+          if [ -n "$GATED" ] && [ "$GATED" != "$VERSION" ]; then
+            echo "main is at version '$VERSION' but the verified trigger is for '$GATED'. Tag the current main instead." >&2
+            exit 1
+          fi
+
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Releasing v$VERSION"
 

@@ -68,6 +68,11 @@ public sealed class ShareLinkRecord
     /// <summary>Gets or sets the last cleanup error, if any.</summary>
     public string? CleanupError { get; set; }
 
-    /// <summary>Gets or sets the share URL issued at creation, for admin display.</summary>
-    public string? ShareUrl { get; set; }
+    // There is deliberately no ShareUrl property. Up to and including v0.2.2 the
+    // full share URL was persisted here, and it carries the raw token in its query
+    // string, which defeated the point of storing only the HMAC hash in TokenHash:
+    // anyone who could read guestpass.json could redeem every live link. The URL is
+    // now returned once, in the creation response, and never written to disk.
+    // ShareLinkStore.ScrubLegacyShareUrlsAsync removes the field from stores written
+    // by older versions.
 }

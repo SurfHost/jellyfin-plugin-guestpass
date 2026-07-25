@@ -177,11 +177,22 @@ public sealed class JellyfinGuestUserService
 
         SetPolicyValue(policy, "AuthenticationProviderId", GetUserValue(user, "AuthenticationProviderId"));
         SetPolicyValue(policy, "PasswordResetProviderId", GetUserValue(user, "PasswordResetProviderId"));
-        SetPolicyValue(policy, "AllowedTags", string.IsNullOrWhiteSpace(record.AllowedTag) ? Array.Empty<string>() : new[] { record.AllowedTag! });
+
+        // Confinement-critical, so these use the throwing setter. EnableAllFolders below is
+        // true by design (tag filtering, not folder filtering, is what limits a guest), which
+        // means a silently skipped AllowedTags write would hand the guest the entire library.
+        // A reflective miss here has to abort the redemption, not fall through.
+        if (string.IsNullOrWhiteSpace(record.AllowedTag))
+        {
+            throw new InvalidOperationException(
+                FormattableString.Invariant($"GuestPass: record {record.Id} has no AllowedTag, so guest access cannot be confined to the shared item."));
+        }
+
+        SetPolicyValueRequired(policy, "AllowedTags", new[] { record.AllowedTag! });
+        SetPolicyValueRequired(policy, "IsAdministrator", false);
+        SetPolicyValueRequired(policy, "IsDisabled", disabled);
         SetPolicyValue(policy, "BlockedTags", Array.Empty<string>());
-        SetPolicyValue(policy, "IsAdministrator", false);
         SetPolicyValue(policy, "IsHidden", true);
-        SetPolicyValue(policy, "IsDisabled", disabled);
         SetPolicyValue(policy, "EnableCollectionManagement", false);
         SetPolicyValue(policy, "EnableSubtitleManagement", false);
         SetPolicyValue(policy, "EnableLyricManagement", false);
@@ -393,7 +404,13 @@ public sealed class JellyfinGuestUserService
             : null;
     }
 
-    private static void SetPolicyValue(UserPolicy policy, string memberName, object? value)
+    /// <summary>
+    /// Best-effort policy write. Reflection is used so the plugin keeps working when a
+    /// Jellyfin release renames or drops a policy member, so a miss is tolerated here.
+    /// Use <see cref="SetPolicyValueRequired"/> for anything that enforces confinement.
+    /// </summary>
+    /// <returns><see langword="true"/> when the member was found and assigned.</returns>
+    private static bool SetPolicyValue(UserPolicy policy, string memberName, object? value)
     {
         var policyType = policy.GetType();
 
@@ -401,13 +418,30 @@ public sealed class JellyfinGuestUserService
         if (property is not null && property.CanWrite && TryConvertValue(property.PropertyType, value, out var convertedPropertyValue))
         {
             property.SetValue(policy, convertedPropertyValue);
-            return;
+            return true;
         }
 
         var field = policyType.GetField(memberName, BindingFlags.Instance | BindingFlags.Public);
         if (field is not null && TryConvertValue(field.FieldType, value, out var convertedFieldValue))
         {
             field.SetValue(policy, convertedFieldValue);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Policy write that must succeed. Throws rather than failing open when the member is
+    /// missing or the value will not convert, which happens if a Jellyfin upgrade changes
+    /// <c>UserPolicy</c> under us.
+    /// </summary>
+    private static void SetPolicyValueRequired(UserPolicy policy, string memberName, object? value)
+    {
+        if (!SetPolicyValue(policy, memberName, value))
+        {
+            throw new InvalidOperationException(FormattableString.Invariant(
+                $"GuestPass: UserPolicy.{memberName} could not be set on this Jellyfin version, so guest access cannot be safely restricted. Refusing to create or update the guest user."));
         }
     }
 

@@ -79,8 +79,6 @@ public sealed class ShareLinkAdminRecordDto
     public int CleanupAttempts { get; set; }
 
     public string? CleanupError { get; set; }
-
-    public string? ShareUrl { get; set; }
 }
 
 /// <summary>Guest session state returned to the web client.</summary>
@@ -252,9 +250,12 @@ public sealed class GuestPassController : ControllerBase
             var creatorUserId = GetCurrentUserId();
             var oneUse = request.OneUse ?? config.OneUseDefault;
             var creation = await _creationService.CreateAsync(item, creatorUserId, expiryHours, oneUse, cancellationToken).ConfigureAwait(false);
+
+            // Returned once and never persisted: the URL embeds the raw token, so writing
+            // it back to the store would put a redeemable credential on disk next to its
+            // own hash. The admin list therefore cannot re-show a link after creation,
+            // which is the intended behaviour for a bearer-token share URL.
             var shareUrl = BuildShareUrl(Request, creation.RawToken);
-            creation.Record.ShareUrl = shareUrl;
-            await _store.UpdateAsync(creation.Record, cancellationToken).ConfigureAwait(false);
             return Ok(new ShareLinkCreateResponse
             {
                 ShareUrl = shareUrl,
@@ -505,8 +506,7 @@ setTimeout(function () { window.location.replace({{redirectUrlJson}}); }, 4000);
             OneUse = record.OneUse,
             MetadataTouched = record.MetadataTouched,
             CleanupAttempts = record.CleanupAttempts,
-            CleanupError = record.CleanupError,
-            ShareUrl = record.ShareUrl
+            CleanupError = record.CleanupError
         };
     }
 

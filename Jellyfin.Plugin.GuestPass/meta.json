@@ -6,7 +6,7 @@
   "framework": "net9.0",
   "owner": "SurfHost",
   "overview": "Expiring guest links for Jellyfin, no account needed.",
-  "description": "Send someone a temporary link to one movie, episode, season or series. They watch it without an account and without seeing the rest of your library. Injects its client script in memory, so it works on containers with a read-only web root.",
+  "description": "Send someone a temporary link to one movie, episode, season or series. They watch it without an account and without seeing the rest of your library. Injects its client script in memory, so it works on containers with a read-only web root. GPL-3.0 fork of Franciskid/jellyfin-plugin-sharelinks.",
   "category": "General",
   "timestamp": "2026-07-24T01:00:00.0000000Z"
 }

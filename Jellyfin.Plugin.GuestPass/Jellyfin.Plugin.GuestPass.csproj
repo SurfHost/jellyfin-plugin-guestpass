@@ -15,6 +15,11 @@
     <Company>SurfHost</Company>
     <Authors>SurfHost</Authors>
     <!--
+      This is a fork of Franciskid/jellyfin-plugin-sharelinks, which is GPL-3.0, so
+      the upstream copyright travels with the assembly and not only with the README.
+    -->
+    <Copyright>Copyright (C) 2026 Franciskid, Copyright (C) 2026 SurfHost. Licensed under the GPL-3.0.</Copyright>
+    <!--
       Never copy referenced Jellyfin/ASP.NET assemblies next to the plugin dll.
       Jellyfin loads every dll it finds in the plugin folder into a separate
       PluginLoadContext, so a private copy of these would give IStartupFilter a

@@ -323,11 +323,10 @@
                     var itemName = escapeHtml(record.ItemNameSnapshot || record.ItemId || '');
                     var guestName = escapeHtml(record.GuestUserName || 'n/a');
                     var expires = fmtDate(record.ExpiresAtUtc || record.ExpiresAt);
-                    var shareUrl = record.ShareUrl ? escapeHtml(record.ShareUrl) : '';
-                    var linkCell = shareUrl
-                        ? '<button is="emby-button" type="button" class="raised" data-copy="' + shareUrl + '"><span>Copy</span></button> ' +
-                          '<a href="' + shareUrl + '" target="_blank" rel="noopener">Open</a>'
-                        : '<span class="sl-muted">n/a</span>';
+                    // There is no Copy or Open button here, and there cannot be one: the
+                    // share URL embeds the raw token and is never stored, so the server has
+                    // nothing to hand back. It is shown once, when the link is created.
+                    var linkCell = '<span class="sl-muted">Shown once at creation</span>';
                     return [
                         '<tr>',
                         '<td>', escapeHtml(status), '</td>',
@@ -361,12 +360,6 @@
                     });
                 });
 
-                Array.from(body.querySelectorAll('button[data-copy]')).forEach(function (button) {
-                    button.addEventListener('click', function () {
-                        copyShareUrl(button);
-                    });
-                });
-
                 page.querySelector('#LinksStatus').textContent = items.length + ' link' + (items.length === 1 ? '' : 's') + ' loaded.';
             }
 
@@ -385,52 +378,9 @@
                 });
             }
 
-            function copyShareUrl(button) {
-                var url = button.getAttribute('data-copy');
-                if (!url) {
-                    return;
-                }
-
-                copyText(url).then(function () {
-                    var span = button.querySelector('span');
-                    if (!span) {
-                        return;
-                    }
-                    span.textContent = 'Copied';
-                    window.setTimeout(function () {
-                        span.textContent = 'Copy';
-                    }, 2000);
-                });
-            }
-
-            function copyText(text) {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    return navigator.clipboard.writeText(text).catch(function () {
-                        return fallbackCopyText(text);
-                    });
-                }
-
-                return fallbackCopyText(text);
-            }
-
-            function fallbackCopyText(text) {
-                var textarea = document.createElement('textarea');
-                textarea.value = text;
-                textarea.setAttribute('readonly', 'readonly');
-                textarea.style.position = 'fixed';
-                textarea.style.top = '-1000px';
-                textarea.style.left = '-1000px';
-                document.body.appendChild(textarea);
-                textarea.focus();
-                textarea.select();
-                try {
-                    document.execCommand('copy');
-                } catch (error) {
-                    // Best effort only.
-                }
-                textarea.remove();
-                return Promise.resolve();
-            }
+            // The clipboard helpers that used to live here are gone with the Copy button.
+            // Copying the share URL now only happens in guestpass.js, at creation time,
+            // which is the only moment the URL exists outside the guest's browser.
 
             function revokeLink(id) {
                 if (!id) {

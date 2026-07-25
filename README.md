@@ -38,10 +38,11 @@ already serving those files to every client.
    Choose an expiry and the plugin hands you a link, copied to your clipboard.
 2. The plugin tags the shared item with a unique random tag and records the share. Share a series or a
    season and the tag is applied to the whole tree underneath it, so the guest can browse from the series
-   page down into a season and an episode. The raw link token is shown to you once and never stored, only
-   a keyed HMAC hash of it is kept.
+   page down into a season and an episode. The link is shown to you once, at that moment, and neither the
+   raw token nor the URL containing it is written to disk: only a keyed HMAC hash of the token is kept.
 3. Whoever opens the link gets a throwaway guest user created on the spot, restricted by that tag to the
-   shared item and its tree, and is signed in automatically.
+   shared item and its tree, and is signed in automatically. If that tag restriction cannot be applied,
+   creation fails and no guest user is left behind, rather than handing out an unconfined account.
 4. When the link expires, or you revoke it, a cleanup pass disables and deletes the guest user and strips
    the temporary tag from the whole tree again.
 
@@ -55,9 +56,25 @@ and making in-page links inert.
 
 ## Managing links
 
-The plugin's dashboard page lists every share with its status, title, a copyable link, the guest name and
-an expiry, and lets you revoke any of them on the spot. Revoking runs the same teardown as expiry: guest
-gone, tag gone.
+The plugin's dashboard page lists every share with its status, title, the guest name and an expiry, and
+lets you revoke or delete any of them on the spot. Revoking runs the same teardown as expiry: guest gone,
+tag gone.
+
+**The link itself is not in that list, and cannot be.** You get the URL once, when you create it, and it
+is copied to your clipboard then. After that the server only holds a hash of the token, so there is
+nothing to show you and nothing to copy. If you lose a link before sending it, revoke it and make a new
+one, which takes a few seconds.
+
+## What is stored on disk
+
+The plugin keeps its records in `guestpass.json` in its own data directory. Per share that is the item id
+and title, the tag it applied, the guest user name, the expiry, the status, and a keyed HMAC hash of the
+share token. It is deliberately not enough to reconstruct a working link.
+
+Versions up to and including 0.2.2 also stored the full share URL there for the dashboard's copy button,
+which meant the raw token sat on disk next to its own hash, so anyone who could read that file could open
+every live link. That is fixed: the field is gone, and on the first start after upgrading the plugin
+rewrites `guestpass.json` without it. Existing links keep working, they just cannot be read back out.
 
 ## Install
 
@@ -90,6 +107,8 @@ Changes made in this fork by [SurfHost](https://github.com/SurfHost):
 - Dutch web client support
 - injection status surfaced on the configuration page instead of only in the server log
 - a configuration toggle to disable the injection without uninstalling
+
+Release history, including the security fixes, is in [CHANGELOG.md](CHANGELOG.md).
 
 Licensed under the [GPL-3.0](LICENSE), like the original and like most Jellyfin plugins.
 
