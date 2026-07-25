@@ -4,7 +4,7 @@ The short, user-facing version of each release also lives in `manifest.json`, be
 Jellyfin shows in the plugin catalog. This file is the longer version, and it is the one to edit first
 when preparing a release. Older entries below are condensed from the manifest.
 
-## Unreleased
+## 0.2.3
 
 Security fixes. Nothing changes about how you create, share or revoke a link, but one thing you could do
 before is gone on purpose: the dashboard no longer offers a Copy or Open button per share.
