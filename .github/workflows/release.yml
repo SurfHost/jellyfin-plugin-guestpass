@@ -204,8 +204,12 @@ jobs:
           if git diff --cached --quiet; then
             echo "manifest.json already up to date."
           else
-            git config user.name 'github-actions[bot]'
-            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            # Committed as the repo owner rather than github-actions[bot]. The push is
+            # still authenticated with GITHUB_TOKEN; this only sets the author, and it
+            # keeps a bot out of the repository's contributor list for what is really
+            # this release's own bookkeeping.
+            git config user.name 'SurfHost'
+            git config user.email 'SurfHost@users.noreply.github.com'
             git commit -m "Sync manifest.json for v${VERSION} [skip ci]"
             git push origin HEAD:main
           fi
