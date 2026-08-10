@@ -40,7 +40,7 @@ jobs:
     steps:
       # No "ref:" here on purpose. This checks out whatever was pushed (the tagged
       # commit), which is the thing whose version claims are being verified.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -114,12 +114,12 @@ jobs:
     needs: version-gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '9.0.x'
 
