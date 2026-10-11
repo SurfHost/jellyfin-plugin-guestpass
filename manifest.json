@@ -6,7 +6,7 @@
     "overview": "Expiring guest links for Jellyfin, no account needed.",
     "owner": "SurfHost",
     "category": "General",
-    "imageUrl": "",
+    "imageUrl": "https://raw.githubusercontent.com/SurfHost/jellyfin-plugin-guestpass/main/logo.png",
     "versions": [
       {
         "version": "0.3.0",

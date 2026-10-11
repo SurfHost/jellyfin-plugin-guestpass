@@ -4,6 +4,16 @@ The text Jellyfin shows in its plugin catalog lives in `manifest.json`. From 0.3
 writes it from this file: the section for the version being released is flattened into one paragraph.
 Edit this file first when preparing a release. Entries before 0.2.3 are condensed from the manifest.
 
+## 0.3.1
+
+- A logo for the plugin, shown in Jellyfin's plugin catalog and on the installed plugins page.
+
+Repository changes, no effect on the plugin itself:
+
+- The release zip now carries `logo.png` next to the dll and `meta.json`, and the release workflow checks
+  the zip holds exactly those three files instead of only rejecting known-bad names. `logo.svg` is the
+  editable source of the logo.
+
 ## 0.3.0
 
 For Jellyfin 12.2. Jellyfin 12 runs on .NET 10 and no longer loads plugins built for 10.11, so this

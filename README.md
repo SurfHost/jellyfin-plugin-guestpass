@@ -1,5 +1,7 @@
 # GuestPass for Jellyfin
 
+<p align="center"><img src="logo.png" alt="GuestPass for Jellyfin" width="640"></p>
+
 Send someone a single movie, episode, season or whole series, without giving them an account, without
 them seeing the rest of your library.
 

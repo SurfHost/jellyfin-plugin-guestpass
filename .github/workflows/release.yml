@@ -176,14 +176,15 @@ jobs:
           cp Jellyfin.Plugin.GuestPass/meta.json meta.json
           # -j flattens paths so the zip is flat; Jellyfin extracts it verbatim
           # into <plugins>/<name>_<version>/ and a nested folder would break it.
-          zip -j "guestpass_$VERSION.zip" publish/Jellyfin.Plugin.GuestPass.dll meta.json
+          zip -j "guestpass_$VERSION.zip" publish/Jellyfin.Plugin.GuestPass.dll meta.json logo.png
 
-          # Fail loudly rather than shipping a package that installs and silently
-          # does nothing: a private copy of these assemblies would give the
-          # IStartupFilter a second type identity in the plugin load context.
-          if unzip -l "guestpass_$VERSION.zip" | grep -Eq 'Microsoft\.|MediaBrowser\.|/'; then
-            echo "Package contains nested paths or framework assemblies." >&2
-            unzip -l "guestpass_$VERSION.zip" >&2
+          # Exactly these three files (meta.json's imagePath names logo.png). Fail
+          # loudly rather than shipping a package that installs and silently does
+          # nothing: a private copy of a Jellyfin or framework assembly would give
+          # the IStartupFilter a second type identity in the plugin load context.
+          FILES=$(unzip -Z1 "guestpass_$VERSION.zip" | LC_ALL=C sort | tr '\n' ' ')
+          if [ "$FILES" != "Jellyfin.Plugin.GuestPass.dll logo.png meta.json " ]; then
+            echo "Unexpected package contents: $FILES" >&2
             exit 1
           fi
 
