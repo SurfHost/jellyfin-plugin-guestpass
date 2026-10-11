@@ -20,7 +20,7 @@ public sealed class WebInjectionStatus
     /// <summary>Gets or sets the resolved Jellyfin web root.</summary>
     public string? WebPath { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether index.html was found and could be read.</summary>
+    /// <summary>Gets or sets a value indicating whether the last index.html response was a page that could be patched.</summary>
     public bool IndexReadable { get; set; }
 
     private long _servedCount;

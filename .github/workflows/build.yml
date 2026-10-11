@@ -36,7 +36,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restore
         run: dotnet restore "$PROJECT" --configfile "$NUGET_CONFIG"
@@ -48,7 +48,7 @@ jobs:
 
       - name: Verify formatting
         # The default severity (info) is used because the tree is already clean at that
-        # level, checked against SDK 9.0.316. If a future SDK starts reporting new
+        # level, checked against SDK 10.0.401. If a future SDK starts reporting new
         # info-level suggestions and this turns noisy on files nobody touched, add
         # "--severity warn" rather than dropping the step. Run "dotnet format
         # Jellyfin.Plugin.GuestPass/Jellyfin.Plugin.GuestPass.csproj" locally to fix.

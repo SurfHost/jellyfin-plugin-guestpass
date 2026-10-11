@@ -1,8 +1,31 @@
 # Changelog
 
-The short, user-facing version of each release also lives in `manifest.json`, because that is the text
-Jellyfin shows in the plugin catalog. This file is the longer version, and it is the one to edit first
-when preparing a release. Older entries below are condensed from the manifest.
+The text Jellyfin shows in its plugin catalog lives in `manifest.json`. From 0.3.0 on, the release workflow
+writes it from this file: the section for the version being released is flattened into one paragraph.
+Edit this file first when preparing a release. Entries before 0.2.3 are condensed from the manifest.
+
+## 0.3.0
+
+For Jellyfin 12.2. Jellyfin 12 runs on .NET 10 and no longer loads plugins built for 10.11, so this
+release is rebuilt for it. Servers still on Jellyfin 10.11 should stay on 0.2.3, which remains in the
+catalog for them.
+
+- **Built for Jellyfin 12.2 and .NET 10** (`targetAbi 12.2.0.0`). The guest-user calls GuestPass makes
+  through reflection were checked against Jellyfin 12.2: changing a password now takes a user id instead
+  of a user object, which the existing id-based fallback already covers, and everything else is unchanged.
+- **Works alongside other plugins that add scripts to the web client.** GuestPass used to answer the
+  request for the web client's `index.html` on its own and never pass it on, which hid the scripts of
+  every other plugin that injects into the same page, such as MeTube for Jellyfin. It now lets Jellyfin
+  serve the page and adds its script to the response on the way out, so all of them load. The page is
+  still never modified on disk, and browsers still cannot revalidate their way back to an unpatched copy.
+- The client script now reports the right version (0.2.3 still said 0.2.2).
+
+Repository changes, no effect on the plugin itself:
+
+- The release workflow reads the target framework and `targetAbi` from `meta.json` instead of
+  hard-coding them, refuses to release when `guestpass.js` reports a different version, and fills the
+  catalog changelog from this file instead of "See the GitHub release notes."
+- Builds use the .NET 10 SDK, pinned through a new `global.json`.
 
 ## 0.2.3
 

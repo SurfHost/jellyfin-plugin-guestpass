@@ -9,8 +9,13 @@ name: Release
 # that already has a release replaces that release's asset and refreshes the
 # checksum instead of failing, so it can never collide with itself.
 #
-# To cut a release: bump <Version> in the csproj and "version" in meta.json,
-# commit to main, then either push a tag vX.Y.Z or run this workflow manually.
+# meta.json is also the source of the target framework and targetAbi, so moving to a
+# new Jellyfin release only means editing meta.json and the csproj.
+#
+# To cut a release: bump the version in the csproj (Version, AssemblyVersion,
+# FileVersion), meta.json and guestpass.js (clientVersion), add a CHANGELOG.md
+# section, commit to main, then either push a tag vX.Y.Z or run this workflow
+# manually.
 #
 # The version-gate job below refuses the release when those files disagree with the
 # tag, because the release job builds from main rather than from the tagged commit:
@@ -44,7 +49,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify the tag, meta.json, the csproj and manifest.json agree
+      - name: Verify the tag, meta.json, the csproj, guestpass.js and manifest.json agree
         id: check
         run: |
           set -euo pipefail
@@ -64,6 +69,13 @@ jobs:
               fail=1
             fi
           done
+
+          # The client script reports its own version to the browser console, and it
+          # went stale once already (0.2.3 shipped a script still saying 0.2.2).
+          if ! grep -q "var clientVersion = '$META';" Jellyfin.Plugin.GuestPass/Web/guestpass.js; then
+            echo "guestpass.js clientVersion does not match meta.json ('$META')." >&2
+            fail=1
+          fi
 
           # A drifted guid would make Jellyfin treat the release as a different
           # plugin, so installs would not upgrade, they would sit side by side.
@@ -121,12 +133,14 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
-      - name: Read the version from meta.json
+      - name: Read the version, target ABI and framework from meta.json
         id: v
         run: |
           VERSION=$(jq -r '.version' Jellyfin.Plugin.GuestPass/meta.json)
+          ABI=$(jq -r '.targetAbi' Jellyfin.Plugin.GuestPass/meta.json)
+          FRAMEWORK=$(jq -r '.framework' Jellyfin.Plugin.GuestPass/meta.json)
           if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "meta.json version must be MAJOR.MINOR.PATCH, got '$VERSION'." >&2
             exit 1
@@ -143,12 +157,14 @@ jobs:
           fi
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Releasing v$VERSION"
+          echo "abi=$ABI" >> "$GITHUB_OUTPUT"
+          echo "framework=$FRAMEWORK" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$VERSION for Jellyfin $ABI ($FRAMEWORK)"
 
       - name: Build
         run: |
           dotnet publish Jellyfin.Plugin.GuestPass/Jellyfin.Plugin.GuestPass.csproj \
-            -c Release -f net9.0 --no-self-contained -o publish \
+            -c Release -f ${{ steps.v.outputs.framework }} --no-self-contained -o publish \
             -p:Version=${{ steps.v.outputs.version }} \
             -p:AssemblyVersion=${{ steps.v.outputs.version }} \
             -p:FileVersion=${{ steps.v.outputs.version }}
@@ -190,14 +206,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.v.outputs.version }}"
+          ABI="${{ steps.v.outputs.abi }}"
           MD5="${{ steps.pkg.outputs.md5 }}"
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/guestpass_${VERSION}.zip"
           TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          # Preserve an existing changelog for this version if there is one.
-          CL="$(jq -r --arg v "$VERSION" '(.[0].versions[] | select(.version==$v) | .changelog) // "See the GitHub release notes."' manifest.json)"
+          # The changelog Jellyfin shows in its catalog: this version's CHANGELOG.md
+          # section flattened to one plain-text paragraph (markdown bullets, bold and
+          # backticks stripped). Falls back to what the manifest already had.
+          CL=$(awk -v v="$VERSION" '
+            $0 ~ "^## \\[?" v "\\]?( |$)" {found=1; next}
+            found && /^## / {exit}
+            found && NF {sub(/^ *[-*] /, ""); sub(/^ +/, ""); gsub(/\*\*|`/, ""); printf "%s ", $0}
+          ' CHANGELOG.md | sed 's/ *$//')
+          if [ -z "$CL" ]; then
+            CL="$(jq -r --arg v "$VERSION" '(.[0].versions[] | select(.version==$v) | .changelog) // "See the GitHub release notes."' manifest.json)"
+          fi
           # Upsert: drop any existing entry for this version, put the fresh one first.
-          jq --arg v "$VERSION" --arg sum "$MD5" --arg url "$URL" --arg ts "$TS" --arg cl "$CL" \
-            '.[0].versions |= ([{version:$v, changelog:$cl, targetAbi:"10.11.0.0", sourceUrl:$url, checksum:$sum, timestamp:$ts}] + map(select(.version != $v)))' \
+          jq --arg v "$VERSION" --arg sum "$MD5" --arg url "$URL" --arg ts "$TS" --arg cl "$CL" --arg abi "$ABI" \
+            '.[0].versions |= ([{version:$v, changelog:$cl, targetAbi:$abi, sourceUrl:$url, checksum:$sum, timestamp:$ts}] + map(select(.version != $v)))' \
             manifest.json > manifest.tmp && mv manifest.tmp manifest.json
 
           git add manifest.json

@@ -110,7 +110,7 @@ public sealed class InjectionStatusDto
     /// <summary>Gets or sets a value indicating whether the startup filter was registered and ran.</summary>
     public bool FilterInstalled { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether index.html could be read.</summary>
+    /// <summary>Gets or sets a value indicating whether the last index.html response could be patched.</summary>
     public bool IndexReadable { get; set; }
 
     /// <summary>Gets or sets a value indicating whether everything is working.</summary>

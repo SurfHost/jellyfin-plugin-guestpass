@@ -86,7 +86,9 @@ public sealed class JellyfinGuestUserService
 
         // The password must be changed before the policy update: UpdatePolicyAsync bumps the
         // user's EF concurrency token server-side, and ChangePassword with a stale instance
-        // throws DbUpdateConcurrencyException.
+        // throws DbUpdateConcurrencyException. (Jellyfin 12 takes a user id for both and
+        // reloads the row itself, matched by the Guid candidates below; the order is kept
+        // for the instance-based overloads.)
         await ChangePasswordAsync(user, password, cancellationToken).ConfigureAwait(false);
         await ApplyPolicyAsync(user, record, disabled: false, cancellationToken).ConfigureAwait(false);
 

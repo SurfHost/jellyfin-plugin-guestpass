@@ -26,11 +26,11 @@ starts. That fails on any container whose web root is not writable, which is mos
 The write throws `UnauthorizedAccessException`, the exception is swallowed into a single log warning, and
 the plugin presents as "installed, enabled, no button". Nothing else about it is wrong.
 
-**GuestPass injects the script in memory instead.** It registers an ASP.NET Core `IStartupFilter` and
-serves a modified `index.html` from the response pipeline. The file on disk is never touched, never even
+**GuestPass injects the script in memory instead.** It registers an ASP.NET Core `IStartupFilter` that
+patches `index.html` in the HTTP response on its way out. The file on disk is never touched, never even
 opened for writing, so it needs no write access and no root, and it survives Jellyfin updates and
-container rebuilds untouched. Reading the web root is enough, and that always works, since the server is
-already serving those files to every client.
+container rebuilds untouched. Because it patches the page Jellyfin already serves rather than replacing
+it, it works side by side with other plugins that inject into the same page, such as MeTube for Jellyfin.
 
 ## How it works
 
@@ -90,7 +90,10 @@ then.
 
 ## Compatibility
 
-Jellyfin **10.11** (`targetAbi 10.11.0.0`), .NET 9.
+Jellyfin **12.2** (`targetAbi 12.2.0.0`), .NET 10.
+
+Jellyfin 10.11 servers can keep using GuestPass 0.2.3, the last release built for 10.11. It stays in the
+repository manifest, and Jellyfin only offers each server the versions whose `targetAbi` it supports.
 
 ## Credits and license
 
