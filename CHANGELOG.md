@@ -4,6 +4,10 @@ The text Jellyfin shows in its plugin catalog lives in `manifest.json`. From 0.3
 writes it from this file: the section for the version being released is flattened into one paragraph.
 Edit this file first when preparing a release. Entries before 0.2.3 are condensed from the manifest.
 
+## 0.3.2
+
+- Fixed: the plugin's logo disappeared from Jellyfin's plugin pages after a restart. The running plugin reported its version with four parts (0.3.1.0) while Jellyfin looks the image up by the three-part version from meta.json (0.3.1).
+
 ## 0.3.1
 
 - A logo for the plugin, shown in Jellyfin's plugin catalog and on the installed plugins page.
