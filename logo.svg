@@ -17,28 +17,33 @@
 
   <rect width="1920" height="1080" fill="url(#bg)"/>
 
-  <!-- Ticket: the pass itself, tilted like it was just handed over. -->
-  <g transform="translate(520 540) rotate(-9)">
-    <rect x="-280" y="-170" width="560" height="340" fill="url(#jf)" mask="url(#ticket)"/>
-    <!-- Perforation between the ticket and its stub. -->
-    <line x1="130" y1="-140" x2="130" y2="140" stroke="#0a0f1e" stroke-opacity="0.45" stroke-width="10" stroke-linecap="round" stroke-dasharray="2 26"/>
-    <!-- Play button. -->
-    <path d="M -95 -88 L 60 0 L -95 88 Z" fill="#fff" stroke="#fff" stroke-width="22" stroke-linejoin="round"/>
-    <!-- Stub lines. -->
-    <rect x="168" y="-62" width="64" height="16" rx="8" fill="#fff" fill-opacity="0.85"/>
-    <rect x="168" y="-22" width="44" height="16" rx="8" fill="#fff" fill-opacity="0.6"/>
-    <rect x="168" y="18" width="56" height="16" rx="8" fill="#fff" fill-opacity="0.6"/>
+  <!-- Emblem: a ticket with a clock badge, centred in the emblem column. -->
+  <g transform="translate(408 540) scale(0.8794) translate(-544.5 -591)">
+    <!-- Ticket: the pass itself, tilted like it was just handed over. -->
+    <g transform="translate(520 540) rotate(-9)">
+      <rect x="-280" y="-170" width="560" height="340" fill="url(#jf)" mask="url(#ticket)"/>
+      <!-- Perforation between the ticket and its stub. -->
+      <line x1="130" y1="-140" x2="130" y2="140" stroke="#0a0f1e" stroke-opacity="0.45" stroke-width="10" stroke-linecap="round" stroke-dasharray="2 26"/>
+      <!-- Play button. -->
+      <path d="M -95 -88 L 60 0 L -95 88 Z" fill="#fff" stroke="#fff" stroke-width="22" stroke-linejoin="round"/>
+      <!-- Stub lines. -->
+      <rect x="168" y="-62" width="64" height="16" rx="8" fill="#fff" fill-opacity="0.85"/>
+      <rect x="168" y="-22" width="44" height="16" rx="8" fill="#fff" fill-opacity="0.6"/>
+      <rect x="168" y="18" width="56" height="16" rx="8" fill="#fff" fill-opacity="0.6"/>
+    </g>
+
+    <!-- Clock badge: the link expires. -->
+    <g transform="translate(760 742)">
+      <circle r="112" fill="#0a0f1e"/>
+      <circle r="92" fill="#fff"/>
+      <circle r="92" fill="none" stroke="url(#jf)" stroke-width="14"/>
+      <path d="M 0 -52 L 0 0 L 38 26" fill="none" stroke="#1d2747" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle r="11" fill="#1d2747"/>
+    </g>
   </g>
 
-  <!-- Clock badge: the link expires. -->
-  <g transform="translate(760 742)">
-    <circle r="112" fill="#0a0f1e"/>
-    <circle r="92" fill="#fff"/>
-    <circle r="92" fill="none" stroke="url(#jf)" stroke-width="14"/>
-    <path d="M 0 -52 L 0 0 L 38 26" fill="none" stroke="#1d2747" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle r="11" fill="#1d2747"/>
-  </g>
-
-  <text x="960" y="532" font-family="Segoe UI, sans-serif" font-weight="700" font-size="176" fill="#ffffff" letter-spacing="-2">GuestPass</text>
-  <text x="966" y="626" font-family="Segoe UI, sans-serif" font-weight="400" font-size="52" fill="#a9b6d6">Expiring guest links for Jellyfin</text>
+  <!-- Plugin name. -->
+  <text x="756" y="489" font-family="Segoe UI, sans-serif" font-weight="700" font-size="200" fill="#ffffff" letter-spacing="-1">GuestPass</text>
+  <!-- Tagline, two lines, sized to stay readable on Jellyfin's small plugin cards. -->
+  <text font-family="Segoe UI, sans-serif" font-weight="600" font-size="100" fill="#d6def5"><tspan x="760" y="615">Expiring guest links</tspan><tspan x="760" y="731">for Jellyfin</tspan></text>
 </svg>

@@ -7,7 +7,7 @@
     // Spanish/Portuguese copiar.
     var copyVerbs = ['copy', 'copi', 'kopi', 'masol', 'kopyala', 'antigraf', 'kopiro', 'copie'];
     var actionLabel = 'GuestPass';
-    var clientVersion = '0.3.2';
+    var clientVersion = '0.3.3';
     var allowedItemStorageKey = 'guestpass.allowedItemId';
     var guestClassName = 'guestpass-guest';
     var hiddenAttr = 'data-guestpass-hidden';
